@@ -1,0 +1,23 @@
+# Environment variables
+.env
+
+# Dependencies
+node_modules/
+
+# Build output
+build/
+dist/
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-*
+.cursor/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Operating System
+.DS_Store
+Thumbs.db 

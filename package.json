@@ -1,0 +1,27 @@
+{
+  "name": "freedcamp-mcp",
+  "version": "0.1.0",
+  "description": "MCP server implementation for Freedcamp task management",
+  "type": "module",
+  "main": "src/freedcamp-mcp.js",
+  "scripts": {
+    "start": "node dist/server.js",
+    "test": "node test.js",
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.11.4",
+    "dotenv": "^16.4.1",
+    "node-fetch": "^3.3.2",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "@types/node-fetch": "^2.6.11",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=17.0.0"
+  }
+}
