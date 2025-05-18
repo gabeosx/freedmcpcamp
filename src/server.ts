@@ -46,7 +46,7 @@ const server = new Server({
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [{
-      name: "mcp/add_task",
+      name: "mcp_add_task",
       description: "Create a new task in Freedcamp",
       inputSchema: {
         type: "object",
@@ -60,7 +60,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         required: ["title"]
       }
     }, {
-      name: "mcp/update_task",
+      name: "mcp_update_task",
       description: "Update an existing task in Freedcamp",
       inputSchema: {
         type: "object",
@@ -76,7 +76,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         required: ["task_id"]
       }
     }, {
-      name: "mcp/list_tasks",
+      name: "mcp_list_tasks",
       description: "List tasks in a Freedcamp project",
       inputSchema: {
         type: "object",
@@ -92,7 +92,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   // Ensure arguments exist
   const arguments_ = request.params.arguments || {};
 
-  if (request.params.name === "mcp/add_task") {
+  if (request.params.name === "mcp_add_task") {
     try {
       // Parse and validate arguments with environment variable fallbacks
       const args = addTaskSchema.parse(arguments_);
@@ -153,7 +153,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
   }
 
-  if (request.params.name === "mcp/update_task") {
+  if (request.params.name === "mcp_update_task") {
     try {
       // Parse and validate arguments with environment variable fallbacks
       const args = updateTaskSchema.parse(arguments_);
@@ -273,7 +273,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   //   }
   // }
 
-  if (request.params.name === "mcp/list_tasks") {
+  if (request.params.name === "mcp_list_tasks") {
     try {
       // Parse and validate arguments with environment variable fallbacks
       const args = listTasksSchema.parse(arguments_);

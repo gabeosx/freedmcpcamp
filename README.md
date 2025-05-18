@@ -69,7 +69,7 @@ The test harness performs the following checks:
 
 ### Available Tools
 
-1. `mcp/add_task`
+1. `mcp_add_task`
    - Creates a new task in Freedcamp
    - Parameters:
      - `title` (required): Task title
@@ -78,7 +78,7 @@ The test harness performs the following checks:
      - `due_date` (optional): Task due date (YYYY-MM-DD)
      - `assigned_to_id` (optional): User ID to assign the task to
 
-2. `mcp/update_task`
+2. `mcp_update_task`
    - Updates an existing task
    - Parameters:
      - `task_id` (required): ID of the task to update
@@ -89,7 +89,7 @@ The test harness performs the following checks:
      - `assigned_to_id` (optional): New user ID to assign the task to
      - `status` (optional): New task status (0=open, 1=completed, 2=closed)
 
-3. `mcp/list_tasks`
+3. `mcp_list_tasks`
    - Lists all tasks in the configured Freedcamp project
    - No parameters required (uses project ID from environment variables)
    - Returns a list of tasks with their details
@@ -136,95 +136,10 @@ The server can be run directly using `npx` without cloning the repository.
            "FREEDCAMP_PROJECT_ID": "your_project_id"
          },
          "alwaysAllow": [
-           "mcp/add_task"
+           "mcp_add_task"
          ]
        }
      }
    }
    ```
-   - You can use `"alwaysAllow"` to always permit certain tools.
-
-3. Restart Roo or reload MCP servers.
-
-#### VS Code
-
-1. Install the MCP extension for VS Code
-2. Configure the extension to point to your server:
-   ```json
-   {
-     "mcp.servers": [
-       {
-         "name": "Freedcamp",
-         "command": "npx",
-         "args": ["freedcamp-mcp"],
-         "env": {
-           "FREEDCAMP_API_KEY": "your_api_key",
-           "FREEDCAMP_API_SECRET": "your_api_secret",
-           "FREEDCAMP_PROJECT_ID": "your_project_id"
-         }
-       }
-     ]
-   }
-   ```
-
-### API Key Security
-
-When setting up API keys in your IDE:
-
-1. **Never commit IDE settings containing API keys**: Add your IDE's settings files (like `.vscode/settings.json` or `.cursor/settings.json`) to `.gitignore`
-2. **Use environment variables when possible**: For development outside the IDE, use `.env` files
-3. **Rotate API keys regularly**: Update your API keys periodically for security
-4. **Use separate API keys**: Consider using different API keys for development and production
-
-## Environment Variables
-
-- `FREEDCAMP_API_KEY`: Your Freedcamp API key (required)
-- `FREEDCAMP_API_SECRET`: Your Freedcamp API secret (required)
-- `FREEDCAMP_PROJECT_ID`: The ID of the Freedcamp project to manage tasks in (required)
-
-## Error Handling
-
-The server includes comprehensive error handling:
-- Validates all input parameters using Zod schemas
-- Provides descriptive error messages
-- Handles API errors gracefully
-- Returns appropriate error responses to the client
-
-## Development
-
-### Building
-
-```bash
-npm run build
-```
-
-For development with watch mode:
-```bash
-npm run dev
-```
-
-### Testing
-
-The project uses a TypeScript-based test harness that verifies:
-- Server initialization and protocol compliance
-- Tool availability and functionality
-- Task management operations (create, update, list)
-- Error handling and validation
-- Environment variable configuration
-
-Run the tests with:
-```bash
-npm test
-```
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a new Pull Request
-
-## License
-
-MIT 
+   - You can use `"alwaysAllow"`

@@ -50,7 +50,7 @@ const tests = [
       id: randomUUID(),
       method: 'tools/call',
       params: {
-        name: 'mcp/add_task',
+        name: 'mcp_add_task',
         arguments: {
           title: 'Test task from MCP',
           description: 'This is a test task created via MCP CLI',
@@ -66,7 +66,7 @@ const tests = [
       id: randomUUID(),
       method: 'tools/call',
       params: {
-        name: 'mcp/list_tasks',
+        name: 'mcp_list_tasks',
         arguments: {}
       }
     }
@@ -86,7 +86,7 @@ function getUpdateTaskTest() {
       id: randomUUID(),
       method: 'tools/call',
       params: {
-        name: 'mcp/update_task',
+        name: 'mcp_update_task',
         arguments: {
           task_id: createdTaskId,
           title: 'Updated test task from MCP',
