@@ -52,16 +52,24 @@ Then start the server:
 npm start
 ```
 
-### Running the Test Client
+### Running the Test Harness
 
-Test the server functionality:
+The project includes a comprehensive test harness that verifies all MCP functionality:
+
 ```bash
 npm test
 ```
 
+The test harness performs the following checks:
+1. Server initialization with proper protocol version
+2. Tool listing and capability verification
+3. Task creation with various parameters
+4. Task updates including status changes
+5. Task listing and verification
+
 ### Available Tools
 
-1. `add_task`
+1. `mcp/add_task`
    - Creates a new task in Freedcamp
    - Parameters:
      - `title` (required): Task title
@@ -70,7 +78,7 @@ npm test
      - `due_date` (optional): Task due date (YYYY-MM-DD)
      - `assigned_to_id` (optional): User ID to assign the task to
 
-2. `update_task`
+2. `mcp/update_task`
    - Updates an existing task
    - Parameters:
      - `task_id` (required): ID of the task to update
@@ -81,19 +89,14 @@ npm test
      - `assigned_to_id` (optional): New user ID to assign the task to
      - `status` (optional): New task status (0=open, 1=completed, 2=closed)
 
-3. `delete_task` (temporarily disabled)
-   - This tool is currently disabled due to issues with the Freedcamp API's delete endpoint not working as expected.
-   - Parameters:
-     - `task_id` (required): ID of the task to delete
-
-4. `list_tasks`
-   - Lists all tasks in a Freedcamp project
-   - Parameters:
-     - `project_id` (required): ID of the project to list tasks for
-     - `api_key` (required): Your Freedcamp API key
-     - `api_secret` (optional): Your Freedcamp API secret
+3. `mcp/list_tasks`
+   - Lists all tasks in the configured Freedcamp project
+   - No parameters required (uses project ID from environment variables)
+   - Returns a list of tasks with their details
 
 ### IDE Integration
+
+The server can be run directly using `npx` without cloning the repository.
 
 #### Cursor
 
@@ -103,8 +106,8 @@ npm test
    {
      "mcpServers": {
        "freedcamp": {
-         "command": "node",
-         "args": ["dist/server.js"],
+         "command": "npx",
+         "args": ["freedcamp-mcp"],
          "env": {
            "FREEDCAMP_API_KEY": "your_api_key",
            "FREEDCAMP_API_SECRET": "your_api_secret",
@@ -125,23 +128,20 @@ npm test
      "mcpServers": {
        "Freedcamp": {
          "transport": "stdio",
-         "command": "node",
-         "args": [
-           "/absolute/path/to/your/freedcamp-mcp/dist/server.js"
-         ],
+         "command": "npx",
+         "args": ["freedcamp-mcp"],
          "env": {
            "FREEDCAMP_API_KEY": "your_api_key",
            "FREEDCAMP_API_SECRET": "your_api_secret",
            "FREEDCAMP_PROJECT_ID": "your_project_id"
          },
          "alwaysAllow": [
-           "add_task"
+           "mcp/add_task"
          ]
        }
      }
    }
    ```
-   - Adjust the `"command"` and `"args"` as needed for your environment.
    - You can use `"alwaysAllow"` to always permit certain tools.
 
 3. Restart Roo or reload MCP servers.
@@ -155,8 +155,8 @@ npm test
      "mcp.servers": [
        {
          "name": "Freedcamp",
-         "command": "node",
-         "args": ["dist/server.js"],
+         "command": "npx",
+         "args": ["freedcamp-mcp"],
          "env": {
            "FREEDCAMP_API_KEY": "your_api_key",
            "FREEDCAMP_API_SECRET": "your_api_secret",
@@ -178,9 +178,9 @@ When setting up API keys in your IDE:
 
 ## Environment Variables
 
-- `FREEDCAMP_API_KEY`: Your Freedcamp API key
-- `FREEDCAMP_API_SECRET`: Your Freedcamp API secret
-- `FREEDCAMP_PROJECT_ID`: The ID of the Freedcamp project to manage tasks in
+- `FREEDCAMP_API_KEY`: Your Freedcamp API key (required)
+- `FREEDCAMP_API_SECRET`: Your Freedcamp API secret (required)
+- `FREEDCAMP_PROJECT_ID`: The ID of the Freedcamp project to manage tasks in (required)
 
 ## Error Handling
 
@@ -205,6 +205,14 @@ npm run dev
 
 ### Testing
 
+The project uses a TypeScript-based test harness that verifies:
+- Server initialization and protocol compliance
+- Tool availability and functionality
+- Task management operations (create, update, list)
+- Error handling and validation
+- Environment variable configuration
+
+Run the tests with:
 ```bash
 npm test
 ```

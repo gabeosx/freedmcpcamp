@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
@@ -7,9 +9,6 @@ import { buildFreedcampAuthParams } from "./freedcamp.js";
 
 // Define schemas for our tools
 const addTaskSchema = z.object({
-  api_key: z.string(),
-  api_secret: z.string().optional(),
-  project_id: z.string(),
   title: z.string(),
   description: z.string().optional(),
   due_date: z.string().optional(), // YYYY-MM-DD
@@ -18,8 +17,6 @@ const addTaskSchema = z.object({
 });
 
 const updateTaskSchema = z.object({
-  api_key: z.string(),
-  api_secret: z.string().optional(),
   task_id: z.string(),
   title: z.string().optional(),
   description: z.string().optional(),
@@ -30,16 +27,10 @@ const updateTaskSchema = z.object({
 });
 
 const deleteTaskSchema = z.object({
-  api_key: z.string(),
-  api_secret: z.string().optional(),
   task_id: z.string()
 });
 
-const listTasksSchema = z.object({
-  api_key: z.string(),
-  api_secret: z.string().optional(),
-  project_id: z.string(),
-});
+const listTasksSchema = z.object({});
 
 // Create the server
 const server = new Server({
@@ -55,30 +46,25 @@ const server = new Server({
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [{
-      name: "add_task",
+      name: "mcp/add_task",
       description: "Create a new task in Freedcamp",
       inputSchema: {
         type: "object",
         properties: {
-          api_key: { type: "string", description: "Freedcamp API key" },
-          api_secret: { type: "string", description: "Freedcamp API secret" },
-          project_id: { type: "string", description: "Project ID to create task in" },
           title: { type: "string", description: "Task title" },
           description: { type: "string", description: "Task description" },
           due_date: { type: "string", description: "Due date (YYYY-MM-DD)" },
           assigned_to_id: { type: "string", description: "User ID to assign task to" },
           priority: { type: "number", description: "Task priority (0-3)" }
         },
-        required: ["api_key", "project_id", "title"]
+        required: ["title"]
       }
     }, {
-      name: "update_task",
+      name: "mcp/update_task",
       description: "Update an existing task in Freedcamp",
       inputSchema: {
         type: "object",
         properties: {
-          api_key: { type: "string", description: "Freedcamp API key" },
-          api_secret: { type: "string", description: "Freedcamp API secret" },
           task_id: { type: "string", description: "ID of task to update" },
           title: { type: "string", description: "New task title" },
           description: { type: "string", description: "New task description" },
@@ -87,31 +73,15 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           priority: { type: "number", description: "New task priority (0-3)" },
           status: { type: "number", description: "New task status (0=open, 1=completed, 2=closed)" }
         },
-        required: ["api_key", "task_id"]
+        required: ["task_id"]
       }
     }, {
-      // name: "delete_task",
-      // description: "Delete a task from Freedcamp",
-      // inputSchema: {
-      //   type: "object",
-      //   properties: {
-      //     api_key: { type: "string", description: "Freedcamp API key" },
-      //     api_secret: { type: "string", description: "Freedcamp API secret" },
-      //     task_id: { type: "string", description: "ID of task to delete" }
-      //   },
-      //   required: ["api_key", "task_id"]
-      // },
-      // (Temporarily disabled due to Freedcamp API issues)
-      name: "list_tasks",
+      name: "mcp/list_tasks",
       description: "List tasks in a Freedcamp project",
       inputSchema: {
         type: "object",
-        properties: {
-          api_key: { type: "string", description: "Freedcamp API key" },
-          api_secret: { type: "string", description: "Freedcamp API secret" },
-          project_id: { type: "string", description: "Project ID to list tasks for" }
-        },
-        required: ["api_key", "project_id"]
+        properties: {},
+        required: []
       }
     }]
   };
@@ -122,25 +92,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   // Ensure arguments exist
   const arguments_ = request.params.arguments || {};
 
-  if (request.params.name === "add_task") {
+  if (request.params.name === "mcp/add_task") {
     try {
       // Parse and validate arguments with environment variable fallbacks
-      const args = addTaskSchema.parse({
-        api_key: arguments_.api_key || process.env.FREEDCAMP_API_KEY,
-        api_secret: arguments_.api_secret || process.env.FREEDCAMP_API_SECRET,
-        project_id: arguments_.project_id || process.env.FREEDCAMP_PROJECT_ID,
-        ...arguments_
-      });
+      const args = addTaskSchema.parse(arguments_);
       
       // Prepare Freedcamp API auth params
       const authParams = buildFreedcampAuthParams({
-        api_key: args.api_key,
-        api_secret: args.api_secret,
+        api_key: process.env.FREEDCAMP_API_KEY!,
+        api_secret: process.env.FREEDCAMP_API_SECRET!,
       });
 
       // Prepare task data
       const data: Record<string, any> = {
-        project_id: args.project_id,
+        project_id: process.env.FREEDCAMP_PROJECT_ID!,
         title: args.title,
       };
       if (args.description) data.description = args.description;
@@ -188,20 +153,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
   }
 
-  if (request.params.name === "update_task") {
+  if (request.params.name === "mcp/update_task") {
     try {
       // Parse and validate arguments with environment variable fallbacks
-      const args = updateTaskSchema.parse({
-        api_key: arguments_.api_key || process.env.FREEDCAMP_API_KEY,
-        api_secret: arguments_.api_secret || process.env.FREEDCAMP_API_SECRET,
-        ...arguments_
-      });
+      const args = updateTaskSchema.parse(arguments_);
       console.log("Update task args:", args);
       
       // Prepare Freedcamp API auth params
       const authParams = buildFreedcampAuthParams({
-        api_key: args.api_key,
-        api_secret: args.api_secret,
+        api_key: process.env.FREEDCAMP_API_KEY!,
+        api_secret: process.env.FREEDCAMP_API_SECRET!,
       });
       console.log("Update task auth params:", authParams);
 
@@ -312,24 +273,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   //   }
   // }
 
-  if (request.params.name === "list_tasks") {
+  if (request.params.name === "mcp/list_tasks") {
     try {
       // Parse and validate arguments with environment variable fallbacks
-      const args = listTasksSchema.parse({
-        api_key: arguments_.api_key || process.env.FREEDCAMP_API_KEY,
-        api_secret: arguments_.api_secret || process.env.FREEDCAMP_API_SECRET,
-        project_id: arguments_.project_id || process.env.FREEDCAMP_PROJECT_ID,
-        ...arguments_
-      });
+      const args = listTasksSchema.parse(arguments_);
       // Prepare Freedcamp API auth params
       const authParams = buildFreedcampAuthParams({
-        api_key: args.api_key,
-        api_secret: args.api_secret,
+        api_key: process.env.FREEDCAMP_API_KEY!,
+        api_secret: process.env.FREEDCAMP_API_SECRET!,
       });
       // Build query string
       const params = new URLSearchParams({
         ...authParams,
-        project_id: args.project_id,
+        project_id: process.env.FREEDCAMP_PROJECT_ID!,
       });
       const url = `https://freedcamp.com/api/v1/tasks/?${params.toString()}`;
       console.log("Making request to Freedcamp API with URL:", url);
@@ -366,7 +322,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   };
 });
 
+// Redirect console.log to stderr so it doesn't interfere with JSON responses
+const originalConsoleLog = console.log;
+console.log = (...args) => {
+  process.stderr.write(args.map(arg => 
+    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+  ).join(' ') + '\n');
+};
+
 // Start the server with stdio transport
 const transport = new StdioServerTransport();
 await server.connect(transport);
-console.log("Freedcamp MCP server running on stdio");
