@@ -97,13 +97,12 @@ npm test
 
 #### Cursor
 
-1. Install the MCP extension for Cursor
-2. Configure the extension to point to your server:
+1. Open (or create) `.cursor/mcp.json` in your project root.
+2. Add your Freedcamp MCP server configuration:
    ```json
    {
-     "mcp.servers": [
-       {
-         "name": "Freedcamp",
+     "mcpServers": {
+       "freedcamp": {
          "command": "node",
          "args": ["dist/server.js"],
          "env": {
@@ -112,9 +111,40 @@ npm test
            "FREEDCAMP_PROJECT_ID": "your_project_id"
          }
        }
-     ]
+     }
    }
    ```
+3. Restart Cursor or reload MCP servers.
+
+#### Roo
+
+1. Open (or create) your Roo MCP config file (commonly `roo.mcp.json` or similar).
+2. Add your Freedcamp MCP server configuration:
+   ```json
+   {
+     "mcpServers": {
+       "Freedcamp": {
+         "transport": "stdio",
+         "command": "node",
+         "args": [
+           "/absolute/path/to/your/freedcamp-mcp/dist/server.js"
+         ],
+         "env": {
+           "FREEDCAMP_API_KEY": "your_api_key",
+           "FREEDCAMP_API_SECRET": "your_api_secret",
+           "FREEDCAMP_PROJECT_ID": "your_project_id"
+         },
+         "alwaysAllow": [
+           "add_task"
+         ]
+       }
+     }
+   }
+   ```
+   - Adjust the `"command"` and `"args"` as needed for your environment.
+   - You can use `"alwaysAllow"` to always permit certain tools.
+
+3. Restart Roo or reload MCP servers.
 
 #### VS Code
 
