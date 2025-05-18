@@ -58,7 +58,7 @@ async function testMcpServer() {
         description: "This is a test task"
       }
     });
-    console.log("Add task result:", addResult);
+    console.log("Add task result:", JSON.stringify(addResult, null, 2));
 
     // Extract task ID from the response
     const taskIdMatch = addResult.content[0].text.match(/Task created with ID: (\d+)/);
@@ -66,6 +66,20 @@ async function testMcpServer() {
       throw new Error("Failed to get task ID from response");
     }
     const taskId = taskIdMatch[1];
+
+    // List tasks after add
+    const listAfterAdd = await client.callTool({
+      name: "list_tasks",
+      arguments: {
+        api_key: API_KEY,
+        api_secret: API_SECRET,
+        project_id: PROJECT_ID
+      }
+    });
+    console.log("Tasks after add:", JSON.stringify(listAfterAdd, null, 2));
+    if (!listAfterAdd.content[0].text.includes("Test task")) {
+      throw new Error("Created task not found in list_tasks result");
+    }
 
     // Test update_task
     const updateResult = await client.callTool({
@@ -78,18 +92,41 @@ async function testMcpServer() {
         description: "This is an updated test task"
       }
     });
-    console.log("Update task result:", updateResult);
+    console.log("Update task result:", JSON.stringify(updateResult, null, 2));
 
-    // Test delete_task
-    const deleteResult = await client.callTool({
-      name: "delete_task",
+    // List tasks after update
+    const listAfterUpdate = await client.callTool({
+      name: "list_tasks",
       arguments: {
         api_key: API_KEY,
         api_secret: API_SECRET,
-        task_id: taskId
+        project_id: PROJECT_ID
       }
     });
-    console.log("Delete task result:", deleteResult);
+    console.log("Tasks after update:", JSON.stringify(listAfterUpdate, null, 2));
+
+    // Test delete_task (currently disabled due to Freedcamp API issues)
+    // console.log("Deleting task with ID:", taskId);
+    // const deleteResult = await client.callTool({
+    //   name: "delete_task",
+    //   arguments: {
+    //     api_key: API_KEY,
+    //     api_secret: API_SECRET,
+    //     task_id: taskId
+    //   }
+    // });
+    // console.log("Delete task result (POST /delete):", JSON.stringify(deleteResult, null, 2));
+    //
+    // List tasks after delete
+    // const listAfterDelete = await client.callTool({
+    //   name: "list_tasks",
+    //   arguments: {
+    //     api_key: API_KEY,
+    //     api_secret: API_SECRET,
+    //     project_id: PROJECT_ID
+    //   }
+    // });
+    // console.log("Tasks after delete:", JSON.stringify(listAfterDelete, null, 2));
 
   } catch (error) {
     console.error("Error:", error);

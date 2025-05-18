@@ -81,10 +81,17 @@ npm test
      - `assigned_to_id` (optional): New user ID to assign the task to
      - `status` (optional): New task status (0=open, 1=completed, 2=closed)
 
-3. `delete_task`
-   - Deletes a task
+3. `delete_task` (temporarily disabled)
+   - This tool is currently disabled due to issues with the Freedcamp API's delete endpoint not working as expected.
    - Parameters:
      - `task_id` (required): ID of the task to delete
+
+4. `list_tasks`
+   - Lists all tasks in a Freedcamp project
+   - Parameters:
+     - `project_id` (required): ID of the project to list tasks for
+     - `api_key` (required): Your Freedcamp API key
+     - `api_secret` (optional): Your Freedcamp API secret
 
 ### IDE Integration
 
@@ -98,7 +105,12 @@ npm test
        {
          "name": "Freedcamp",
          "command": "node",
-         "args": ["dist/server.js"]
+         "args": ["dist/server.js"],
+         "env": {
+           "FREEDCAMP_API_KEY": "your_api_key",
+           "FREEDCAMP_API_SECRET": "your_api_secret",
+           "FREEDCAMP_PROJECT_ID": "your_project_id"
+         }
        }
      ]
    }
@@ -114,11 +126,25 @@ npm test
        {
          "name": "Freedcamp",
          "command": "node",
-         "args": ["dist/server.js"]
+         "args": ["dist/server.js"],
+         "env": {
+           "FREEDCAMP_API_KEY": "your_api_key",
+           "FREEDCAMP_API_SECRET": "your_api_secret",
+           "FREEDCAMP_PROJECT_ID": "your_project_id"
+         }
        }
      ]
    }
    ```
+
+### API Key Security
+
+When setting up API keys in your IDE:
+
+1. **Never commit IDE settings containing API keys**: Add your IDE's settings files (like `.vscode/settings.json` or `.cursor/settings.json`) to `.gitignore`
+2. **Use environment variables when possible**: For development outside the IDE, use `.env` files
+3. **Rotate API keys regularly**: Update your API keys periodically for security
+4. **Use separate API keys**: Consider using different API keys for development and production
 
 ## Environment Variables
 

@@ -35,6 +35,12 @@ const deleteTaskSchema = z.object({
   task_id: z.string()
 });
 
+const listTasksSchema = z.object({
+  api_key: z.string(),
+  api_secret: z.string().optional(),
+  project_id: z.string(),
+});
+
 // Create the server
 const server = new Server({
   name: "freedcamp-mcp",
@@ -84,16 +90,28 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         required: ["api_key", "task_id"]
       }
     }, {
-      name: "delete_task",
-      description: "Delete a task from Freedcamp",
+      // name: "delete_task",
+      // description: "Delete a task from Freedcamp",
+      // inputSchema: {
+      //   type: "object",
+      //   properties: {
+      //     api_key: { type: "string", description: "Freedcamp API key" },
+      //     api_secret: { type: "string", description: "Freedcamp API secret" },
+      //     task_id: { type: "string", description: "ID of task to delete" }
+      //   },
+      //   required: ["api_key", "task_id"]
+      // },
+      // (Temporarily disabled due to Freedcamp API issues)
+      name: "list_tasks",
+      description: "List tasks in a Freedcamp project",
       inputSchema: {
         type: "object",
         properties: {
           api_key: { type: "string", description: "Freedcamp API key" },
           api_secret: { type: "string", description: "Freedcamp API secret" },
-          task_id: { type: "string", description: "ID of task to delete" }
+          project_id: { type: "string", description: "Project ID to list tasks for" }
         },
-        required: ["api_key", "task_id"]
+        required: ["api_key", "project_id"]
       }
     }]
   };
@@ -240,59 +258,101 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
   }
 
-  if (request.params.name === "delete_task") {
+  // Delete task tool temporarily disabled due to Freedcamp API issues
+  // if (request.params.name === "delete_task") {
+  //   try {
+  //     // Parse and validate arguments with environment variable fallbacks
+  //     const args = deleteTaskSchema.parse({
+  //       api_key: arguments_.api_key || process.env.FREEDCAMP_API_KEY,
+  //       api_secret: arguments_.api_secret || process.env.FREEDCAMP_API_SECRET,
+  //       ...arguments_
+  //     });
+  //     console.log("Delete task args:", args);
+  //     // Prepare Freedcamp API auth params
+  //     const authParams = buildFreedcampAuthParams({
+  //       api_key: args.api_key,
+  //       api_secret: args.api_secret,
+  //     });
+  //     console.log("Delete task auth params:", authParams);
+  //     // Prepare form data
+  //     const form = new FormData();
+  //     form.append("data", JSON.stringify({})); // Empty data object
+  //     for (const [k, v] of Object.entries(authParams)) {
+  //       form.append(k, v);
+  //     }
+  //     // Make the API call
+  //     const url = `https://freedcamp.com/api/v1/tasks/${args.task_id}/delete`;
+  //     console.log("Making request to Freedcamp API with URL:", url);
+  //     console.log("Request body:", {
+  //       data: "{}",
+  //       ...authParams
+  //     });
+  //     const resp = await fetch(url, {
+  //       method: "POST",
+  //       body: form as any,
+  //     });
+  //     const json = (await resp.json()) as any;
+  //     console.log("Freedcamp API response:", json);
+  //     if (!resp.ok || (json && json.http_code >= 400)) {
+  //       return {
+  //         content: [{ type: "text", text: `Error: ${json?.msg || resp.statusText}` }],
+  //         data: json,
+  //       };
+  //     }
+  //     return {
+  //       content: [{ type: "text", text: `Task deleted successfully` }],
+  //       data: json?.data,
+  //     };
+  //   } catch (err: any) {
+  //     console.error("Error deleting task:", err);
+  //     return {
+  //       content: [{ type: "text", text: `Request failed: ${err.message}` }],
+  //       data: err,
+  //     };
+  //   }
+  // }
+
+  if (request.params.name === "list_tasks") {
     try {
       // Parse and validate arguments with environment variable fallbacks
-      const args = deleteTaskSchema.parse({
+      const args = listTasksSchema.parse({
         api_key: arguments_.api_key || process.env.FREEDCAMP_API_KEY,
         api_secret: arguments_.api_secret || process.env.FREEDCAMP_API_SECRET,
+        project_id: arguments_.project_id || process.env.FREEDCAMP_PROJECT_ID,
         ...arguments_
       });
-      console.log("Delete task args:", args);
-      
       // Prepare Freedcamp API auth params
       const authParams = buildFreedcampAuthParams({
         api_key: args.api_key,
         api_secret: args.api_secret,
       });
-      console.log("Delete task auth params:", authParams);
-
-      // Prepare form data
-      const form = new FormData();
-      form.append("data", JSON.stringify({})); // Empty data object
-      for (const [k, v] of Object.entries(authParams)) {
-        form.append(k, v);
-      }
-
-      // Make the API call
-      const url = `https://freedcamp.com/api/v1/tasks/${args.task_id}/delete`;
-      console.log("Making request to Freedcamp API with URL:", url);
-      console.log("Request body:", {
-        data: "{}",
-        ...authParams
+      // Build query string
+      const params = new URLSearchParams({
+        ...authParams,
+        project_id: args.project_id,
       });
-
+      const url = `https://freedcamp.com/api/v1/tasks/?${params.toString()}`;
+      console.log("Making request to Freedcamp API with URL:", url);
       const resp = await fetch(url, {
-        method: "POST",
-        body: form as any,
+        method: "GET",
       });
       const json = (await resp.json()) as any;
       console.log("Freedcamp API response:", json);
-
       if (!resp.ok || (json && json.http_code >= 400)) {
         return {
           content: [{ type: "text", text: `Error: ${json?.msg || resp.statusText}` }],
           data: json,
         };
       }
-
+      // Return a summary of tasks
+      const tasks = json?.data?.tasks || [];
+      const summary = tasks.map((t: any) => `ID: ${t.id}, Title: ${t.title}`).join("\n");
       return {
-        content: [{ type: "text", text: `Task deleted successfully` }],
-        data: json?.data,
+        content: [{ type: "text", text: summary || "No tasks found." }],
+        data: tasks,
       };
-
     } catch (err: any) {
-      console.error("Error deleting task:", err);
+      console.error("Error listing tasks:", err);
       return {
         content: [{ type: "text", text: `Request failed: ${err.message}` }],
         data: err,
