@@ -69,7 +69,7 @@ The test harness performs the following checks:
 
 ### Available Tools
 
-1. `mcp_add_task`
+1. `freedcamp_add_task`
    - Creates a new task in Freedcamp
    - Parameters:
      - `title` (required): Task title
@@ -78,7 +78,7 @@ The test harness performs the following checks:
      - `due_date` (optional): Task due date (YYYY-MM-DD)
      - `assigned_to_id` (optional): User ID to assign the task to
 
-2. `mcp_update_task`
+2. `freedcamp_update_task`
    - Updates an existing task
    - Parameters:
      - `task_id` (required): ID of the task to update
@@ -89,7 +89,7 @@ The test harness performs the following checks:
      - `assigned_to_id` (optional): New user ID to assign the task to
      - `status` (optional): New task status (0=open, 1=completed, 2=closed)
 
-3. `mcp_list_tasks`
+3. `freedcamp_list_tasks`
    - Lists all tasks in the configured Freedcamp project
    - No parameters required (uses project ID from environment variables)
    - Returns a list of tasks with their details
@@ -136,7 +136,7 @@ The server can be run directly using `npx` without cloning the repository.
            "FREEDCAMP_PROJECT_ID": "your_project_id"
          },
          "alwaysAllow": [
-           "mcp_add_task"
+           "freedcamp_add_task"
          ]
        }
      }
