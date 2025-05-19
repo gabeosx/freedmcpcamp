@@ -33,6 +33,7 @@
   "engines": {
     "node": ">=17.0.0"
   },
+  "license": "MIT",
   "files": [
     "dist/",
     "src/",
