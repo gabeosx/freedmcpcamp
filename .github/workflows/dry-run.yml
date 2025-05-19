@@ -30,6 +30,11 @@ jobs:
         run: npm run build
       
       - name: Test
+        env:
+          FREEDCAMP_API_KEY: ${{ secrets.FREEDCAMP_API_KEY }}
+          FREEDCAMP_API_SECRET: ${{ secrets.FREEDCAMP_API_SECRET }}
+          FREEDCAMP_PROJECT_ID: ${{ secrets.FREEDCAMP_PROJECT_ID }}
+          NODE_OPTIONS: --experimental-vm-modules
         run: npm test
       
       - name: Simulate Version Bump (No Push)
