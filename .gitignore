@@ -16,6 +16,7 @@ dist/
 
 # Logs
 *.log
+logs/
 npm-debug.log*
 
 # Operating System

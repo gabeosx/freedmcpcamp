@@ -6,13 +6,12 @@
 [![downloads](https://img.shields.io/npm/dm/freedcamp-mcp)](https://www.npmjs.com/package/freedcamp-mcp)
 [![node](https://img.shields.io/node/v/freedcamp-mcp)](https://nodejs.org/)
 
-This is a Model Context Protocol (MCP) server implementation for Freedcamp task management. It provides tools for creating, updating, and deleting tasks in Freedcamp projects.
+This is a Model Context Protocol (MCP) server implementation for Freedcamp task management. It provides tools for creating, updating, and listing tasks in Freedcamp projects.
 
 ## Features
 
 - Create new tasks with title, description, priority, due date, and assignee
 - Update existing tasks including status changes
-- Delete tasks
 - Environment variable support for credentials
 - Error handling and validation
 
@@ -27,17 +26,20 @@ This is a Model Context Protocol (MCP) server implementation for Freedcamp task 
 ## Installation
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd freedcamp-mcp
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Create a `.env` file in the root directory with your Freedcamp credentials:
+
 ```bash
 FREEDCAMP_API_KEY=your_api_key
 FREEDCAMP_API_SECRET=your_api_secret
@@ -49,11 +51,13 @@ FREEDCAMP_PROJECT_ID=your_project_id
 ### Running the Server
 
 First build the TypeScript code:
+
 ```bash
 npm run build
 ```
 
 Then start the server:
+
 ```bash
 npm start
 ```
@@ -67,6 +71,7 @@ npm test
 ```
 
 The test harness performs the following checks:
+
 1. Server initialization with proper protocol version
 2. Tool listing and capability verification
 3. Task creation with various parameters
@@ -76,6 +81,7 @@ The test harness performs the following checks:
 ### Available Tools
 
 1. `freedcamp_add_task`
+
    - Creates a new task in Freedcamp
    - Parameters:
      - `title` (required): Task title
@@ -85,6 +91,7 @@ The test harness performs the following checks:
      - `assigned_to_id` (optional): User ID to assign the task to
 
 2. `freedcamp_update_task`
+
    - Updates an existing task
    - Parameters:
      - `task_id` (required): ID of the task to update
@@ -141,12 +148,10 @@ The server can be run directly using `npx` without cloning the repository.
            "FREEDCAMP_API_SECRET": "your_api_secret",
            "FREEDCAMP_PROJECT_ID": "your_project_id"
          },
-         "alwaysAllow": [
-           "freedcamp_add_task"
-         ]
+         "alwaysAllow": ["freedcamp_add_task"]
        }
      }
    }
    ```
    - You can use `"alwaysAllow"`Mon May 19 15:39:23 EDT 2025
-Mon May 19 15:49:11 EDT 2025
+     Mon May 19 15:49:11 EDT 2025
