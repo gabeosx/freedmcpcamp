@@ -99,6 +99,26 @@ function getUpdateTaskTest() {
   };
 }
 
+function getDeleteTaskTest() {
+  if (!createdTaskId) {
+    throw new Error('No task ID available for delete test');
+  }
+  return {
+    name: 'delete_task',
+    request: {
+      jsonrpc: '2.0',
+      id: randomUUID(),
+      method: 'tools/call',
+      params: {
+        name: 'freedcamp_delete_task',
+        arguments: {
+          task_id: createdTaskId
+        }
+      }
+    }
+  };
+}
+
 // Verify required environment variables
 const requiredEnvVars = ['FREEDCAMP_API_KEY', 'FREEDCAMP_API_SECRET', 'FREEDCAMP_PROJECT_ID'];
 const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
@@ -139,8 +159,20 @@ server.stdout.on('data', (data) => {
         }
 
         // Store task ID from add_task response
-        if (response.result?.data?.task_id) {
-          createdTaskId = response.result.data.task_id;
+        if (response.result?.content && Array.isArray(response.result.content)) {
+          for (const item of response.result.content) {
+            if (typeof item.text === 'string') {
+              try {
+                const parsed = JSON.parse(item.text);
+                if (parsed && parsed.task_id) {
+                  createdTaskId = parsed.task_id;
+                  break;
+                }
+              } catch (e) {
+                // Not a JSON string, skip
+              }
+            }
+          }
         }
       } catch (parseErr) {
         // Ignore parse errors for incomplete chunks
@@ -183,8 +215,14 @@ async function runTests() {
         console.log('Sending request:', JSON.stringify(updateTest.request, null, 2));
         server.stdin.write(JSON.stringify(updateTest.request) + '\n');
         await new Promise(resolve => setTimeout(resolve, 1000));
+        // Add delete test after update
+        const deleteTest = getDeleteTaskTest();
+        console.log(`\nRunning test: ${deleteTest.name}`);
+        console.log('Sending request:', JSON.stringify(deleteTest.request, null, 2));
+        server.stdin.write(JSON.stringify(deleteTest.request) + '\n');
+        await new Promise(resolve => setTimeout(resolve, 1000));
       } else {
-        console.error('Failed to get task ID for update test');
+        console.error('Failed to get task ID for update/delete test');
       }
     }
   }
