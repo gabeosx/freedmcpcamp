@@ -45,4 +45,17 @@ jobs:
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           npm version patch
           git push --follow-tags
-          npm publish --access public 
+          npm publish --access public
+
+      - name: Get latest tag
+        id: get_tag
+        run: echo "tag=$(git describe --tags --abbrev=0)" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ steps.get_tag.outputs.tag }}
+          release_name: ${{ steps.get_tag.outputs.tag }}
+          body: ${{ env.COMMIT_MSG }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
