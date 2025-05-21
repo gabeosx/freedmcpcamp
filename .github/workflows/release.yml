@@ -56,11 +56,11 @@ jobs:
       - name: Debug tag
         run: echo "Tag is ${{ steps.get_tag.outputs.tag }}"
 
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.get_tag.outputs.tag }}
-          release_name: ${{ steps.get_tag.outputs.tag }}
+          name: ${{ steps.get_tag.outputs.tag }}
           body: ${{ env.COMMIT_MSG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }} 
