@@ -10,6 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           token: ${{ secrets.GH_PAT }}
       
       - name: Setup Node.js
@@ -49,7 +50,11 @@ jobs:
 
       - name: Get latest tag
         id: get_tag
-        run: echo "tag=$(git describe --tags --abbrev=0)" >> $GITHUB_OUTPUT
+        run: |
+          echo "tag=$(git describe --tags --abbrev=0)" >> $GITHUB_OUTPUT
+
+      - name: Debug tag
+        run: echo "Tag is ${{ steps.get_tag.outputs.tag }}"
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
