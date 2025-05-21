@@ -63,4 +63,4 @@ jobs:
           release_name: ${{ steps.get_tag.outputs.tag }}
           body: ${{ env.COMMIT_MSG }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }} 
