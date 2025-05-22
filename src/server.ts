@@ -252,22 +252,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         api_secret: process.env.FREEDCAMP_API_SECRET!,
       });
       console.log("Delete task auth params:", authParams);
-      // Prepare form data
-      const form = new FormData();
-      form.append("data", JSON.stringify({})); // Empty data object
-      for (const [k, v] of Object.entries(authParams)) {
-        form.append(k, v);
-      }
-      // Make the API call
-      const url = `https://freedcamp.com/api/v1/tasks/${args.task_id}/delete`;
-      console.log("Making request to Freedcamp API with URL:", url);
-      console.log("Request body:", {
-        data: "{}",
-        ...authParams
-      });
+      // Build query string
+      const params = new URLSearchParams(authParams);
+      const url = `https://freedcamp.com/api/v1/tasks/${args.task_id}?${params.toString()}`;
+      console.log("Making DELETE request to Freedcamp API with URL:", url);
       const resp = await fetch(url, {
-        method: "POST",
-        body: form as any,
+        method: "DELETE",
       });
       const json = (await resp.json()) as any;
       console.log("Freedcamp API response:", json);

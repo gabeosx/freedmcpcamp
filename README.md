@@ -25,7 +25,7 @@ This is a Model Context Protocol (MCP) server implementation for Freedcamp task 
 - API Key and Secret from Freedcamp
 - Project ID from Freedcamp
 
-## Installation
+## Installation (for manual invocation only, not necessary for usage with an IDE or other MCP desktop client)
 
 1. Clone the repository:
 ```bash
@@ -141,13 +141,8 @@ The server can be run directly using `npx` without cloning the repository.
            "FREEDCAMP_API_KEY": "your_api_key",
            "FREEDCAMP_API_SECRET": "your_api_secret",
            "FREEDCAMP_PROJECT_ID": "your_project_id"
-         },
-         "alwaysAllow": [
-           "freedcamp_add_task"
-         ]
+         }
        }
      }
    }
    ```
-   - You can use `"alwaysAllow"`Mon May 19 15:39:23 EDT 2025
-Mon May 19 15:49:11 EDT 2025
