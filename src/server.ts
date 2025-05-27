@@ -15,7 +15,9 @@ const singleAddTaskSchema = z.object({
   assigned_to_id: z.string().optional(),
   priority: z.number().int().min(0).max(3).optional()
 });
-const addTaskSchema = z.union([singleAddTaskSchema, z.array(singleAddTaskSchema)]);
+const addTaskSchema = z.object({
+  tasks: z.array(singleAddTaskSchema)
+});
 
 const singleUpdateTaskSchema = z.object({
   task_id: z.string(),
@@ -26,12 +28,16 @@ const singleUpdateTaskSchema = z.object({
   priority: z.number().int().min(0).max(3).optional(),
   status: z.number().int().min(0).max(2).optional() // 0=open, 1=completed, 2=closed
 });
-const updateTaskSchema = z.union([singleUpdateTaskSchema, z.array(singleUpdateTaskSchema)]);
+const updateTaskSchema = z.object({
+  tasks: z.array(singleUpdateTaskSchema)
+});
 
 const singleDeleteTaskSchema = z.object({
   task_id: z.string()
 });
-const deleteTaskSchema = z.union([singleDeleteTaskSchema, z.array(singleDeleteTaskSchema)]);
+const deleteTaskSchema = z.object({
+  tasks: z.array(singleDeleteTaskSchema)
+});
 
 const listTasksSchema = z.object({});
 
@@ -50,33 +56,51 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [{
       name: "freedcamp_add_task",
-      description: "Create a single new task or multiple new tasks in Freedcamp. Input can be a single task object or an array of task objects.",
+      description: "Create one or more new tasks in Freedcamp. Input is an object with a 'tasks' array.",
       inputSchema: {
         type: "object",
         properties: {
-          title: { type: "string", description: "Task title" },
-          description: { type: "string", description: "Task description" },
-          due_date: { type: "string", description: "Due date (YYYY-MM-DD)" },
-          assigned_to_id: { type: "string", description: "User ID to assign task to" },
-          priority: { type: "number", description: "Task priority (0-3)" }
+          tasks: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "Task title" },
+                description: { type: "string", description: "Task description" },
+                due_date: { type: "string", description: "Due date (YYYY-MM-DD)" },
+                assigned_to_id: { type: "string", description: "User ID to assign task to" },
+                priority: { type: "number", description: "Task priority (0-3)" }
+              },
+              required: ["title"]
+            }
+          }
         },
-        required: ["title"]
+        required: ["tasks"]
       }
     }, {
       name: "freedcamp_update_task",
-      description: "Update a single existing task or multiple existing tasks in Freedcamp. Input can be a single task update object or an array of task update objects.",
+      description: "Update one or more existing tasks in Freedcamp. Input is an object with a 'tasks' array.",
       inputSchema: {
         type: "object",
         properties: {
-          task_id: { type: "string", description: "ID of task to update" },
-          title: { type: "string", description: "New task title" },
-          description: { type: "string", description: "New task description" },
-          due_date: { type: "string", description: "New due date (YYYY-MM-DD)" },
-          assigned_to_id: { type: "string", description: "New user ID to assign task to" },
-          priority: { type: "number", description: "New task priority (0-3)" },
-          status: { type: "number", description: "New task status (0=open, 1=completed, 2=closed)" }
+          tasks: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                task_id: { type: "string", description: "ID of task to update" },
+                title: { type: "string", description: "New task title" },
+                description: { type: "string", description: "New task description" },
+                due_date: { type: "string", description: "New due date (YYYY-MM-DD)" },
+                assigned_to_id: { type: "string", description: "New user ID to assign task to" },
+                priority: { type: "number", description: "New task priority (0-3)" },
+                status: { type: "number", description: "New task status (0=open, 1=completed, 2=closed)" }
+              },
+              required: ["task_id"]
+            }
+          }
         },
-        required: ["task_id"]
+        required: ["tasks"]
       }
     }, {
       name: "freedcamp_list_tasks",
@@ -88,13 +112,22 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       }
     }, {
       name: "freedcamp_delete_task",
-      description: "Delete a single task or multiple tasks in Freedcamp. Input can be a single task ID object or an array of task ID objects.",
+      description: "Delete one or more tasks in Freedcamp. Input is an object with a 'tasks' array.",
       inputSchema: {
         type: "object",
         properties: {
-          task_id: { type: "string", description: "ID of task to delete" }
+          tasks: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                task_id: { type: "string", description: "ID of task to delete" }
+              },
+              required: ["task_id"]
+            }
+          }
         },
-        required: ["task_id"]
+        required: ["tasks"]
       }
     }]
   };
@@ -213,7 +246,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (request.params.name === "freedcamp_add_task") {
     try {
       const parsedArgs = addTaskSchema.parse(arguments_);
-      const tasksToAdd = Array.isArray(parsedArgs) ? parsedArgs : [parsedArgs];
+      const tasksToAdd = parsedArgs.tasks;
       const authParams = buildFreedcampAuthParams({
         api_key: process.env.FREEDCAMP_API_KEY!,
         api_secret: process.env.FREEDCAMP_API_SECRET!,
@@ -233,7 +266,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (request.params.name === "freedcamp_update_task") {
     try {
       const parsedArgs = updateTaskSchema.parse(arguments_);
-      const tasksToUpdate = Array.isArray(parsedArgs) ? parsedArgs : [parsedArgs];
+      const tasksToUpdate = parsedArgs.tasks;
       const authParams = buildFreedcampAuthParams({
         api_key: process.env.FREEDCAMP_API_KEY!,
         api_secret: process.env.FREEDCAMP_API_SECRET!,
@@ -253,7 +286,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (request.params.name === "freedcamp_delete_task") {
     try {
       const parsedArgs = deleteTaskSchema.parse(arguments_);
-      const tasksToDelete = Array.isArray(parsedArgs) ? parsedArgs : [parsedArgs];
+      const tasksToDelete = parsedArgs.tasks;
       const authParams = buildFreedcampAuthParams({
         api_key: process.env.FREEDCAMP_API_KEY!,
         api_secret: process.env.FREEDCAMP_API_SECRET!,

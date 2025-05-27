@@ -54,9 +54,13 @@ const tests = [
       params: {
         name: 'freedcamp_add_task',
         arguments: {
-          title: 'Test task from MCP (single)',
-          description: 'This is a single test task created via MCP CLI',
-          priority: 1
+          tasks: [
+            {
+              title: 'Test task from MCP (single)',
+              description: 'This is a single test task created via MCP CLI',
+              priority: 1
+            }
+          ]
         }
       }
     }
@@ -90,11 +94,15 @@ function getUpdateTaskTest() {
       params: {
         name: 'freedcamp_update_task',
         arguments: {
-          task_id: createdTaskId,
-          title: 'Updated test task from MCP (single)',
-          description: 'This task was updated via MCP CLI (single)',
-          priority: 2,
-          status: 1 // Set to completed
+          tasks: [
+            {
+              task_id: createdTaskId,
+              title: 'Updated test task from MCP (single)',
+              description: 'This task was updated via MCP CLI (single)',
+              priority: 2,
+              status: 1 // Set to completed
+            }
+          ]
         }
       }
     }
@@ -114,7 +122,9 @@ function getDeleteTaskTest() {
       params: {
         name: 'freedcamp_delete_task',
         arguments: {
-          task_id: createdTaskId
+          tasks: [
+            { task_id: createdTaskId }
+          ]
         }
       }
     }
@@ -129,18 +139,20 @@ const bulkAddTasksTest = {
     method: 'tools/call',
     params: {
       name: 'freedcamp_add_task',
-      arguments: [
-        {
-          title: 'Bulk Task 1 (MCP)',
-          description: 'First task in bulk operation',
-          priority: 0
-        },
-        {
-          title: 'Bulk Task 2 (MCP)',
-          description: 'Second task in bulk operation',
-          priority: 1
-        }
-      ]
+      arguments: {
+        tasks: [
+          {
+            title: 'Bulk Task 1 (MCP)',
+            description: 'First task in bulk operation',
+            priority: 0
+          },
+          {
+            title: 'Bulk Task 2 (MCP)',
+            description: 'Second task in bulk operation',
+            priority: 1
+          }
+        ]
+      }
     }
   }
 };
@@ -157,18 +169,20 @@ function getBulkUpdateTasksTest() {
       method: 'tools/call',
       params: {
         name: 'freedcamp_update_task',
-        arguments: [
-          {
-            task_id: createdBulkTaskIds[0],
-            title: 'Updated Bulk Task 1 (MCP)',
-            status: 1 // Completed
-          },
-          {
-            task_id: createdBulkTaskIds[1],
-            description: 'Updated description for Bulk Task 2 (MCP)',
-            priority: 3
-          }
-        ]
+        arguments: {
+          tasks: [
+            {
+              task_id: createdBulkTaskIds[0],
+              title: 'Updated Bulk Task 1 (MCP)',
+              status: 1 // Completed
+            },
+            {
+              task_id: createdBulkTaskIds[1],
+              description: 'Updated description for Bulk Task 2 (MCP)',
+              priority: 3
+            }
+          ]
+        }
       }
     }
   };
@@ -186,7 +200,81 @@ function getBulkDeleteTasksTest() {
       method: 'tools/call',
       params: {
         name: 'freedcamp_delete_task',
-        arguments: createdBulkTaskIds.map(id => ({ task_id: id }))
+        arguments: {
+          tasks: createdBulkTaskIds.map(id => ({ task_id: id }))
+        }
+      }
+    }
+  };
+}
+
+// --- Bulk Operation Test Definitions ---
+const explicitBulkAddTest = {
+  name: 'explicit_bulk_add_tasks',
+  request: {
+    jsonrpc: '2.0',
+    id: randomUUID(),
+    method: 'tools/call',
+    params: {
+      name: 'freedcamp_add_task',
+      arguments: {
+        tasks: [
+          {
+            title: 'Explicit Bulk Task 1 (MCP)',
+            description: 'First explicit bulk task',
+            priority: 0
+          },
+          {
+            title: 'Explicit Bulk Task 2 (MCP)',
+            description: 'Second explicit bulk task',
+            priority: 2
+          }
+        ]
+      }
+    }
+  }
+};
+
+function getExplicitBulkUpdateTest(taskIds: string[]) {
+  return {
+    name: 'explicit_bulk_update_tasks',
+    request: {
+      jsonrpc: '2.0',
+      id: randomUUID(),
+      method: 'tools/call',
+      params: {
+        name: 'freedcamp_update_task',
+        arguments: {
+          tasks: [
+            {
+              task_id: taskIds[0],
+              title: 'Updated Explicit Bulk Task 1 (MCP)',
+              status: 1
+            },
+            {
+              task_id: taskIds[1],
+              description: 'Updated description for Explicit Bulk Task 2 (MCP)',
+              priority: 3
+            }
+          ]
+        }
+      }
+    }
+  };
+}
+
+function getExplicitBulkDeleteTest(taskIds: string[]) {
+  return {
+    name: 'explicit_bulk_delete_tasks',
+    request: {
+      jsonrpc: '2.0',
+      id: randomUUID(),
+      method: 'tools/call',
+      params: {
+        name: 'freedcamp_delete_task',
+        arguments: {
+          tasks: taskIds.map(id => ({ task_id: id }))
+        }
       }
     }
   };
@@ -253,7 +341,7 @@ server.stdout.on('data', (data) => {
                 }
               } catch (e) { console.warn(`Could not parse JSON from add_task response item: ${response.result.content[0].text}`, e); }
             }
-          } else if (currentTest?.name === 'bulk_add_tasks') {
+          } else if (currentTest?.name === 'bulk_add_tasks' || currentTest?.name === 'explicit_bulk_add_tasks') {
             createdBulkTaskIds = []; // Reset
             if (!hasOperationError) {
               for (const item of response.result.content) {
@@ -263,9 +351,9 @@ server.stdout.on('data', (data) => {
                     if (parsedText && parsedText.task_id) {
                       createdBulkTaskIds.push(parsedText.task_id);
                     } else {
-                      console.warn(`Could not extract task_id from bulk_add_tasks response item: ${item.text}`);
+                      console.warn(`Could not extract task_id from ${currentTest.name} response item: ${item.text}`);
                     }
-                  } catch (e) { console.warn(`Could not parse JSON from bulk_add_tasks response item: ${item.text}`, e); }
+                  } catch (e) { console.warn(`Could not parse JSON from ${currentTest.name} response item: ${item.text}`, e); }
                 }
               }
             }
@@ -401,6 +489,51 @@ async function runTests() {
 
   } else {
     console.error('No task IDs captured from bulk add. Skipping subsequent bulk tests.');
+  }
+
+  // --- Explicit Bulk Operation Tests ---
+  let explicitBulkTaskIds: string[] = [];
+  currentTest = explicitBulkAddTest;
+  console.log(`\nRunning test: ${currentTest.name}`);
+  console.log('Sending request:', JSON.stringify(currentTest.request, null, 2));
+  server.stdin.write(JSON.stringify(currentTest.request) + '\n');
+  await new Promise(resolve => setTimeout(resolve, 4000));
+
+  // Extract task IDs from explicit bulk add
+  if (createdBulkTaskIds.length > 0) {
+    explicitBulkTaskIds = [...createdBulkTaskIds];
+    // List tasks after explicit bulk add (debugging step)
+    const listTasksAfterExplicitBulkAdd = {
+      name: 'list_tasks_after_explicit_bulk_add',
+      request: {
+        jsonrpc: '2.0',
+        id: randomUUID(),
+        method: 'tools/call',
+        params: { name: 'freedcamp_list_tasks', arguments: {} }
+      }
+    };
+    currentTest = listTasksAfterExplicitBulkAdd;
+    console.log(`\nRunning test: ${currentTest.name}`);
+    console.log('Sending request:', JSON.stringify(currentTest.request, null, 2));
+    server.stdin.write(JSON.stringify(currentTest.request) + '\n');
+    await new Promise(resolve => setTimeout(resolve, 4000));
+    // Bulk update
+    const explicitBulkUpdateTest = getExplicitBulkUpdateTest(explicitBulkTaskIds);
+    currentTest = explicitBulkUpdateTest;
+    console.log(`\nRunning test: ${currentTest.name}`);
+    console.log('Sending request:', JSON.stringify(currentTest.request, null, 2));
+    server.stdin.write(JSON.stringify(currentTest.request) + '\n');
+    await new Promise(resolve => setTimeout(resolve, 4000));
+
+    // Bulk delete
+    const explicitBulkDeleteTest = getExplicitBulkDeleteTest(explicitBulkTaskIds);
+    currentTest = explicitBulkDeleteTest;
+    console.log(`\nRunning test: ${currentTest.name}`);
+    console.log('Sending request:', JSON.stringify(currentTest.request, null, 2));
+    server.stdin.write(JSON.stringify(currentTest.request) + '\n');
+    await new Promise(resolve => setTimeout(resolve, 4000));
+  } else {
+    console.error('No task IDs captured from explicit bulk add. Skipping explicit bulk update/delete tests.');
   }
 
   currentTest = null; // Clear context
