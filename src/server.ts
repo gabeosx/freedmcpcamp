@@ -8,15 +8,18 @@ import fetch, { FormData } from "node-fetch";
 import { buildFreedcampAuthParams } from "./freedcamp.js";
 
 // Define schemas for our tools
-const addTaskSchema = z.object({
+const singleAddTaskSchema = z.object({
   title: z.string(),
   description: z.string().optional(),
   due_date: z.string().optional(), // YYYY-MM-DD
   assigned_to_id: z.string().optional(),
   priority: z.number().int().min(0).max(3).optional()
 });
+const addTaskSchema = z.object({
+  tasks: z.array(singleAddTaskSchema)
+});
 
-const updateTaskSchema = z.object({
+const singleUpdateTaskSchema = z.object({
   task_id: z.string(),
   title: z.string().optional(),
   description: z.string().optional(),
@@ -25,9 +28,15 @@ const updateTaskSchema = z.object({
   priority: z.number().int().min(0).max(3).optional(),
   status: z.number().int().min(0).max(2).optional() // 0=open, 1=completed, 2=closed
 });
+const updateTaskSchema = z.object({
+  tasks: z.array(singleUpdateTaskSchema)
+});
 
-const deleteTaskSchema = z.object({
+const singleDeleteTaskSchema = z.object({
   task_id: z.string()
+});
+const deleteTaskSchema = z.object({
+  tasks: z.array(singleDeleteTaskSchema)
 });
 
 const listTasksSchema = z.object({});
@@ -47,33 +56,51 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [{
       name: "freedcamp_add_task",
-      description: "Create a new task in Freedcamp",
+      description: "Create one or more new tasks in Freedcamp. Input is an object with a 'tasks' array.",
       inputSchema: {
         type: "object",
         properties: {
-          title: { type: "string", description: "Task title" },
-          description: { type: "string", description: "Task description" },
-          due_date: { type: "string", description: "Due date (YYYY-MM-DD)" },
-          assigned_to_id: { type: "string", description: "User ID to assign task to" },
-          priority: { type: "number", description: "Task priority (0-3)" }
+          tasks: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                title: { type: "string", description: "Task title" },
+                description: { type: "string", description: "Task description" },
+                due_date: { type: "string", description: "Due date (YYYY-MM-DD)" },
+                assigned_to_id: { type: "string", description: "User ID to assign task to" },
+                priority: { type: "number", description: "Task priority (0-3)" }
+              },
+              required: ["title"]
+            }
+          }
         },
-        required: ["title"]
+        required: ["tasks"]
       }
     }, {
       name: "freedcamp_update_task",
-      description: "Update an existing task in Freedcamp",
+      description: "Update one or more existing tasks in Freedcamp. Input is an object with a 'tasks' array.",
       inputSchema: {
         type: "object",
         properties: {
-          task_id: { type: "string", description: "ID of task to update" },
-          title: { type: "string", description: "New task title" },
-          description: { type: "string", description: "New task description" },
-          due_date: { type: "string", description: "New due date (YYYY-MM-DD)" },
-          assigned_to_id: { type: "string", description: "New user ID to assign task to" },
-          priority: { type: "number", description: "New task priority (0-3)" },
-          status: { type: "number", description: "New task status (0=open, 1=completed, 2=closed)" }
+          tasks: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                task_id: { type: "string", description: "ID of task to update" },
+                title: { type: "string", description: "New task title" },
+                description: { type: "string", description: "New task description" },
+                due_date: { type: "string", description: "New due date (YYYY-MM-DD)" },
+                assigned_to_id: { type: "string", description: "New user ID to assign task to" },
+                priority: { type: "number", description: "New task priority (0-3)" },
+                status: { type: "number", description: "New task status (0=open, 1=completed, 2=closed)" }
+              },
+              required: ["task_id"]
+            }
+          }
         },
-        required: ["task_id"]
+        required: ["tasks"]
       }
     }, {
       name: "freedcamp_list_tasks",
@@ -85,204 +112,194 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       }
     }, {
       name: "freedcamp_delete_task",
-      description: "Delete a task in Freedcamp",
+      description: "Delete one or more tasks in Freedcamp. Input is an object with a 'tasks' array.",
       inputSchema: {
         type: "object",
         properties: {
-          task_id: { type: "string", description: "ID of task to delete" }
+          tasks: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                task_id: { type: "string", description: "ID of task to delete" }
+              },
+              required: ["task_id"]
+            }
+          }
         },
-        required: ["task_id"]
+        required: ["tasks"]
       }
     }]
   };
 });
 
+// Helper function to execute Freedcamp API requests
+async function executeFreedcampRequest(url: string, method: string, authParams: Record<string, string>, bodyData?: Record<string, any>) {
+  const form = new FormData();
+  if (bodyData) {
+    form.append("data", JSON.stringify(bodyData));
+  }
+  for (const [k, v] of Object.entries(authParams)) {
+    form.append(k, v);
+  }
+
+  // For DELETE requests, Freedcamp expects auth params in query string if no body
+  let requestUrl = url;
+  let requestBody: any = form;
+  if (method === "DELETE" && !bodyData) {
+    const params = new URLSearchParams(authParams);
+    requestUrl = `${url}?${params.toString()}`;
+    requestBody = undefined; // No body for DELETE if params are in query
+  }
+  
+  console.log(`Making ${method} request to Freedcamp API: ${requestUrl}`);
+  if (requestBody) {
+    // console.log("Request body:", bodyData ? { data: JSON.stringify(bodyData), ...authParams } : authParams);
+  }
+
+  const resp = await fetch(requestUrl, {
+    method: method,
+    body: requestBody,
+  });
+  const json = (await resp.json()) as any;
+  console.log("Freedcamp API response:", json);
+
+  if (!resp.ok || (json && json.http_code >= 400)) {
+    return { error: json?.msg || resp.statusText, details: json };
+  }
+  return { success: true, data: json?.data };
+}
+
+// Helper to process a single task addition
+async function processSingleAddTask(taskArgs: z.infer<typeof singleAddTaskSchema>, authParams: Record<string, string>) {
+  try {
+    const data: Record<string, any> = {
+      project_id: process.env.FREEDCAMP_PROJECT_ID!,
+      title: taskArgs.title,
+    };
+    if (taskArgs.description) data.description = taskArgs.description;
+    if (taskArgs.due_date) data.due_date = taskArgs.due_date;
+    if (taskArgs.assigned_to_id) data.assigned_to_id = taskArgs.assigned_to_id;
+    if (typeof taskArgs.priority === "number") data.priority = taskArgs.priority;
+
+    const result = await executeFreedcampRequest("https://freedcamp.com/api/v1/tasks", "POST", authParams, data);
+
+    if (result.error) {
+      return { type: "text", text: `Error adding task "${taskArgs.title}": ${result.error}`, details: result.details };
+    }
+    const taskId = result.data?.tasks?.[0]?.id;
+    return { type: "text", text: `Task "${taskArgs.title}" created with ID: ${taskId}`, task_id: taskId };
+  } catch (err: any) {
+    console.error(`Error processing add task "${taskArgs.title}":`, err);
+    return { type: "text", text: `Failed to add task "${taskArgs.title}": ${err.message}`, error_details: err };
+  }
+}
+
+// Helper to process a single task update
+async function processSingleUpdateTask(taskArgs: z.infer<typeof singleUpdateTaskSchema>, authParams: Record<string, string>) {
+  try {
+    const data: Record<string, any> = {};
+    if (taskArgs.title) data.title = taskArgs.title;
+    if (taskArgs.description) data.description = taskArgs.description;
+    if (taskArgs.due_date) data.due_date = taskArgs.due_date;
+    if (taskArgs.assigned_to_id) data.assigned_to_id = taskArgs.assigned_to_id;
+    if (typeof taskArgs.priority === "number") data.priority = taskArgs.priority;
+    if (typeof taskArgs.status === "number") data.status = taskArgs.status;
+
+    const url = `https://freedcamp.com/api/v1/tasks/${taskArgs.task_id}/edit`;
+    const result = await executeFreedcampRequest(url, "POST", authParams, data);
+
+    if (result.error) {
+      return { type: "text", text: `Error updating task ID "${taskArgs.task_id}": ${result.error}`, task_id: taskArgs.task_id, details: result.details };
+    }
+    return { type: "text", text: `Task ID "${taskArgs.task_id}" updated.`, task_id: taskArgs.task_id, data: result.data };
+  } catch (err: any) {
+    console.error(`Error processing update for task ID "${taskArgs.task_id}":`, err);
+    return { type: "text", text: `Failed to update task ID "${taskArgs.task_id}": ${err.message}`, task_id: taskArgs.task_id, error_details: err };
+  }
+}
+
+// Helper to process a single task deletion
+async function processSingleDeleteTask(taskArgs: z.infer<typeof singleDeleteTaskSchema>, authParams: Record<string, string>) {
+  try {
+    const url = `https://freedcamp.com/api/v1/tasks/${taskArgs.task_id}`;
+    // For DELETE, authParams are added to query string by executeFreedcampRequest if bodyData is undefined
+    const result = await executeFreedcampRequest(url, "DELETE", authParams);
+
+    if (result.error) {
+      return { type: "text", text: `Error deleting task ID "${taskArgs.task_id}": ${result.error}`, task_id: taskArgs.task_id, details: result.details };
+    }
+    return { type: "text", text: `Task ID "${taskArgs.task_id}" deleted successfully.`, task_id: taskArgs.task_id, data: result.data };
+  } catch (err: any) {
+    console.error(`Error processing delete for task ID "${taskArgs.task_id}":`, err);
+    return { type: "text", text: `Failed to delete task ID "${taskArgs.task_id}": ${err.message}`, task_id: taskArgs.task_id, error_details: err };
+  }
+}
+
+
 // Handle tool execution
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   // Ensure arguments exist
   const arguments_ = request.params.arguments || {};
+  const results: Array<Record<string, any>> = [];
 
   if (request.params.name === "freedcamp_add_task") {
     try {
-      // Parse and validate arguments with environment variable fallbacks
-      const args = addTaskSchema.parse(arguments_);
-      
-      // Prepare Freedcamp API auth params
+      const parsedArgs = addTaskSchema.parse(arguments_);
+      const tasksToAdd = parsedArgs.tasks;
       const authParams = buildFreedcampAuthParams({
         api_key: process.env.FREEDCAMP_API_KEY!,
         api_secret: process.env.FREEDCAMP_API_SECRET!,
       });
 
-      // Prepare task data
-      const data: Record<string, any> = {
-        project_id: process.env.FREEDCAMP_PROJECT_ID!,
-        title: args.title,
-      };
-      if (args.description) data.description = args.description;
-      if (args.due_date) data.due_date = args.due_date;
-      if (args.assigned_to_id) data.assigned_to_id = args.assigned_to_id;
-      if (typeof args.priority === "number") data.priority = args.priority;
-
-      // Freedcamp expects form-data: 'data' field as JSON
-      const form = new FormData();
-      form.append("data", JSON.stringify(data));
-      // Add auth params as form fields
-      for (const [k, v] of Object.entries(authParams)) {
-        form.append(k, v);
+      for (const taskArg of tasksToAdd) {
+        const result = await processSingleAddTask(taskArg, authParams);
+        results.push(result);
       }
-
-      // Make the API call
-      console.log("Making request to Freedcamp API...");
-      const resp = await fetch("https://freedcamp.com/api/v1/tasks", {
-        method: "POST",
-        body: form as any, // node-fetch v3 FormData
-      });
-      const json = (await resp.json()) as any;
-      console.log("Freedcamp API response:", json);
-
-      if (!resp.ok || (json && json.http_code >= 400)) {
-        return {
-          content: [
-            { type: "text", text: `Error: ${json?.msg || resp.statusText}` },
-            { type: "text", text: JSON.stringify(json) }
-          ]
-        };
-      }
-
-      // Extract the task ID from the response
-      const taskId = json?.data?.tasks?.[0]?.id;
-      return {
-        content: [
-          { type: "text", text: `Task created with ID: ${taskId}` },
-          { type: "text", text: JSON.stringify({ task_id: taskId }) }
-        ]
-      };
-
+      return { content: results.map(r => ({ type: "text", text: JSON.stringify(r) })) };
     } catch (err: any) {
-      console.error("Error calling Freedcamp API:", err);
-      return {
-        content: [
-          { type: "text", text: `Request failed: ${err.message}` },
-          { type: "text", text: JSON.stringify(err) }
-        ]
-      };
+      console.error("Error in freedcamp_add_task handler:", err);
+      return { content: [{ type: "text", text: `Handler error: ${err.message}`, details: JSON.stringify(err) }] };
     }
   }
 
   if (request.params.name === "freedcamp_update_task") {
     try {
-      // Parse and validate arguments with environment variable fallbacks
-      const args = updateTaskSchema.parse(arguments_);
-      console.log("Update task args:", args);
-      
-      // Prepare Freedcamp API auth params
+      const parsedArgs = updateTaskSchema.parse(arguments_);
+      const tasksToUpdate = parsedArgs.tasks;
       const authParams = buildFreedcampAuthParams({
         api_key: process.env.FREEDCAMP_API_KEY!,
         api_secret: process.env.FREEDCAMP_API_SECRET!,
       });
-      console.log("Update task auth params:", authParams);
 
-      // Prepare task data (excluding item_id)
-      const data: Record<string, any> = {};
-      if (args.title) data.title = args.title;
-      if (args.description) data.description = args.description;
-      if (args.due_date) data.due_date = args.due_date;
-      if (args.assigned_to_id) data.assigned_to_id = args.assigned_to_id;
-      if (typeof args.priority === "number") data.priority = args.priority;
-      if (typeof args.status === "number") data.status = args.status;
-      console.log("Update task data:", data);
-
-      // Freedcamp expects form-data
-      const form = new FormData();
-      form.append("data", JSON.stringify(data));
-      for (const [k, v] of Object.entries(authParams)) {
-        form.append(k, v);
+      for (const taskArg of tasksToUpdate) {
+        const result = await processSingleUpdateTask(taskArg, authParams);
+        results.push(result);
       }
-
-      // Make the API call
-      const url = `https://freedcamp.com/api/v1/tasks/${args.task_id}/edit`;
-      console.log("Making request to Freedcamp API with URL:", url);
-      console.log("Request body:", {
-        data: JSON.stringify(data),
-        ...authParams
-      });
-      
-      const resp = await fetch(url, {
-        method: "POST",
-        body: form as any,
-      });
-      const json = (await resp.json()) as any;
-      console.log("Freedcamp API response:", json);
-
-      if (!resp.ok || (json && json.http_code >= 400)) {
-        return {
-          content: [
-            { type: "text", text: `Error: ${json?.msg || resp.statusText}` },
-            { type: "text", text: JSON.stringify(json) }
-          ]
-        };
-      }
-
-      return {
-        content: [
-          { type: "text", text: `Task updated.` },
-          { type: "text", text: JSON.stringify(json?.data) }
-        ]
-      };
-
+      return { content: results.map(r => ({ type: "text", text: JSON.stringify(r) })) };
     } catch (err: any) {
-      console.error("Error updating task:", err);
-      return {
-        content: [
-          { type: "text", text: `Request failed: ${err.message}` },
-          { type: "text", text: JSON.stringify(err) }
-        ]
-      };
+      console.error("Error in freedcamp_update_task handler:", err);
+      return { content: [{ type: "text", text: `Handler error: ${err.message}`, details: JSON.stringify(err) }] };
     }
   }
 
   if (request.params.name === "freedcamp_delete_task") {
     try {
-      // Parse and validate arguments with environment variable fallbacks
-      const args = deleteTaskSchema.parse(arguments_);
-      console.log("Delete task args:", args);
-      // Prepare Freedcamp API auth params
+      const parsedArgs = deleteTaskSchema.parse(arguments_);
+      const tasksToDelete = parsedArgs.tasks;
       const authParams = buildFreedcampAuthParams({
         api_key: process.env.FREEDCAMP_API_KEY!,
         api_secret: process.env.FREEDCAMP_API_SECRET!,
       });
-      console.log("Delete task auth params:", authParams);
-      // Build query string
-      const params = new URLSearchParams(authParams);
-      const url = `https://freedcamp.com/api/v1/tasks/${args.task_id}?${params.toString()}`;
-      console.log("Making DELETE request to Freedcamp API with URL:", url);
-      const resp = await fetch(url, {
-        method: "DELETE",
-      });
-      const json = (await resp.json()) as any;
-      console.log("Freedcamp API response:", json);
-      if (!resp.ok || (json && json.http_code >= 400)) {
-        return {
-          content: [
-            { type: "text", text: `Error: ${json?.msg || resp.statusText}` },
-            { type: "text", text: JSON.stringify(json) }
-          ]
-        };
+
+      for (const taskArg of tasksToDelete) {
+        const result = await processSingleDeleteTask(taskArg, authParams);
+        results.push(result);
       }
-      return {
-        content: [
-          { type: "text", text: `Task deleted successfully` },
-          { type: "text", text: JSON.stringify(json?.data) }
-        ]
-      };
+      return { content: results.map(r => ({ type: "text", text: JSON.stringify(r) })) };
     } catch (err: any) {
-      console.error("Error deleting task:", err);
-      return {
-        content: [
-          { type: "text", text: `Request failed: ${err.message}` },
-          { type: "text", text: JSON.stringify(err) }
-        ]
-      };
+      console.error("Error in freedcamp_delete_task handler:", err);
+      return { content: [{ type: "text", text: `Handler error: ${err.message}`, details: JSON.stringify(err) }] };
     }
   }
 
