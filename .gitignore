@@ -24,4 +24,16 @@ Thumbs.db
 
 # Documentation files
 freedcampdocs.html
-mcpdocs.md 
+mcpdocs.md
+
+# Roo AI configuration files (prevent accidental commits)
+.roo/
+.roomodes
+.windsurfrules
+
+# Task Master configuration files (prevent accidental commits)
+.taskmasterconfig
+tasks/
+tasks.json
+scripts/prd.txt
+scripts/task-complexity-report.json 
