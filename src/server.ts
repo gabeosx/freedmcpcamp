@@ -56,78 +56,136 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [{
       name: "freedcamp_add_task",
-      description: "Create one or more new tasks in Freedcamp. Input is an object with a 'tasks' array.",
+      description: "Create one or more new tasks in Freedcamp. Input is an object with a 'tasks' array containing task details.",
       inputSchema: {
         type: "object",
         properties: {
           tasks: {
             type: "array",
+            description: "Array of tasks to create in Freedcamp",
             items: {
               type: "object",
               properties: {
-                title: { type: "string", description: "Task title" },
-                description: { type: "string", description: "Task description" },
-                due_date: { type: "string", description: "Due date (YYYY-MM-DD)" },
-                assigned_to_id: { type: "string", description: "User ID to assign task to" },
-                priority: { type: "number", description: "Task priority (0-3)" }
+                title: { 
+                  type: "string", 
+                  description: "Required. The title of the task - should be clear and descriptive"
+                },
+                description: { 
+                  type: "string", 
+                  description: "Optional. Detailed description of what the task involves and any specific requirements"
+                },
+                due_date: { 
+                  type: "string", 
+                  description: "Optional. Due date for the task in YYYY-MM-DD format (e.g., '2024-12-31')"
+                },
+                assigned_to_id: { 
+                  type: "string", 
+                  description: "Optional. User ID of the person to assign this task to. Must be a valid Freedcamp user ID"
+                },
+                priority: { 
+                  type: "number", 
+                  description: "Optional. Task priority level as an integer: 0 = Low, 1 = Normal, 2 = High, 3 = Urgent",
+                  minimum: 0,
+                  maximum: 3
+                }
               },
-              required: ["title"]
-            }
+              required: ["title"],
+              additionalProperties: false
+            },
+            minItems: 1
           }
         },
-        required: ["tasks"]
+        required: ["tasks"],
+        additionalProperties: false
       }
     }, {
       name: "freedcamp_update_task",
-      description: "Update one or more existing tasks in Freedcamp. Input is an object with a 'tasks' array.",
+      description: "Update one or more existing tasks in Freedcamp. Input is an object with a 'tasks' array containing task updates.",
       inputSchema: {
         type: "object",
         properties: {
           tasks: {
             type: "array",
+            description: "Array of task updates to apply in Freedcamp",
             items: {
               type: "object",
               properties: {
-                task_id: { type: "string", description: "ID of task to update" },
-                title: { type: "string", description: "New task title" },
-                description: { type: "string", description: "New task description" },
-                due_date: { type: "string", description: "New due date (YYYY-MM-DD)" },
-                assigned_to_id: { type: "string", description: "New user ID to assign task to" },
-                priority: { type: "number", description: "New task priority (0-3)" },
-                status: { type: "number", description: "New task status (0=open, 1=completed, 2=closed)" }
+                task_id: { 
+                  type: "string", 
+                  description: "Required. The unique ID of the task to update. Must be a valid existing Freedcamp task ID"
+                },
+                title: { 
+                  type: "string", 
+                  description: "Optional. New title for the task - will replace the current title"
+                },
+                description: { 
+                  type: "string", 
+                  description: "Optional. New description for the task - will replace the current description"
+                },
+                due_date: { 
+                  type: "string", 
+                  description: "Optional. New due date for the task in YYYY-MM-DD format (e.g., '2024-12-31')"
+                },
+                assigned_to_id: { 
+                  type: "string", 
+                  description: "Optional. User ID to reassign the task to. Must be a valid Freedcamp user ID"
+                },
+                priority: { 
+                  type: "number", 
+                  description: "Optional. New priority level as an integer: 0 = Low, 1 = Normal, 2 = High, 3 = Urgent",
+                  minimum: 0,
+                  maximum: 3
+                },
+                status: { 
+                  type: "number", 
+                  description: "Optional. New task status as an integer: 0 = Open, 1 = Completed, 2 = Closed",
+                  minimum: 0,
+                  maximum: 2
+                }
               },
-              required: ["task_id"]
-            }
+              required: ["task_id"],
+              additionalProperties: false
+            },
+            minItems: 1
           }
         },
-        required: ["tasks"]
+        required: ["tasks"],
+        additionalProperties: false
       }
     }, {
       name: "freedcamp_list_tasks",
-      description: "List tasks in a Freedcamp project",
+      description: "Retrieve a list of all tasks in the configured Freedcamp project. Returns task details including ID, title, status, and other metadata.",
       inputSchema: {
         type: "object",
         properties: {},
-        required: []
+        required: [],
+        additionalProperties: false
       }
     }, {
       name: "freedcamp_delete_task",
-      description: "Delete one or more tasks in Freedcamp. Input is an object with a 'tasks' array.",
+      description: "Permanently delete one or more tasks from Freedcamp. Input is an object with a 'tasks' array containing task IDs to delete.",
       inputSchema: {
         type: "object",
         properties: {
           tasks: {
             type: "array",
+            description: "Array of tasks to permanently delete from Freedcamp",
             items: {
               type: "object",
               properties: {
-                task_id: { type: "string", description: "ID of task to delete" }
+                task_id: { 
+                  type: "string", 
+                  description: "Required. The unique ID of the task to delete. Must be a valid existing Freedcamp task ID. WARNING: This action cannot be undone"
+                }
               },
-              required: ["task_id"]
-            }
+              required: ["task_id"],
+              additionalProperties: false
+            },
+            minItems: 1
           }
         },
-        required: ["tasks"]
+        required: ["tasks"],
+        additionalProperties: false
       }
     }]
   };
@@ -332,13 +390,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           ]
         };
       }
-      // Return a summary of tasks
+      // Return the actual tasks data
       const tasks = json?.data?.tasks || [];
-      const summary = tasks.map((t: any) => `ID: ${t.id}, Title: ${t.title}`).join("\n");
       return {
         content: [
-          { type: "text", text: summary || "No tasks found." },
-          { type: "text", text: JSON.stringify(tasks) }
+          { type: "text", text: JSON.stringify(tasks, null, 2) }
         ]
       };
     } catch (err: any) {

@@ -1,0 +1,34 @@
+# Product Requirements Document (PRD) for freedcamp-mcp
+
+**1. High-Level Overview**
+
+This application, named `freedcamp-mcp`, is a server implementation of the **Model Context Protocol (MCP)** specifically designed for **Freedcamp task management**. Its primary purpose is to provide a standardized interface (via MCP) for creating, updating, and deleting tasks within a specified Freedcamp project. It acts as an integration layer allowing MCP clients (like IDEs) to interact with the Freedcamp API.
+
+**2. Main Modules and Responsibilities**
+
+*   **`server.ts` (compiled to `dist/server.js`)**: The core server process and MCP implementation. It listens for incoming MCP requests, validates them (likely using `zod` based on dependencies), routes them to the appropriate Freedcamp logic, and returns responses according to the MCP specification.
+*   **`freedcamp.ts`**: Contains the specific logic for interacting with the Freedcamp API. This includes making HTTP requests (using `node-fetch`) to create, update, list, and delete tasks, handling API responses, and mapping data between internal structures and the Freedcamp API format.
+*   **`test-harness.ts` (compiled to `dist/test-harness.js`)**: A comprehensive suite for testing the MCP server's functionality end-to-end. It verifies server initialization, tool listing, and the correct execution of task management operations (`add`, `update`, `list`).
+*   **`package.json`**: Defines project metadata, dependencies (`@modelcontextprotocol/sdk`, `dotenv`, `node-fetch`, `zod`), development dependencies, scripts (`start`, `test`, `build`, `dev`), and required Node.js version (`>=17.0.0`).
+*   **`README.md`**: Provides documentation for users, including features, prerequisites, installation, usage instructions (running server, test harness), available MCP tools with parameters, and IDE integration examples.
+
+**3. Data Models and APIs**
+
+*   **Data Models:** Internal data models for tasks and MCP requests/responses are defined within the codebase. These models align with the parameters and return types expected by the MCP specification and the Freedcamp API (as used by `freedcamp.ts`). `zod` is used for request/data validation.
+*   **APIs in Use:**
+    *   **Freedcamp API:** The application interacts with the official Freedcamp API to manage tasks.
+    *   **Model Context Protocol (MCP):** The server exposes an API compliant with the MCP specification, providing the following tools:
+        *   `freedcamp_add_task`: Creates a new task (parameters: `title` (required), `description`, `priority`, `due_date`, `assigned_to_id`).
+        *   `freedcamp_update_task`: Updates an existing task (parameters: `task_id` (required), `title`, `description`, `priority`, `due_date`, `assigned_to_id`, `status`).
+        *   `freedcamp_list_tasks`: Lists tasks in the configured project.
+
+**4. Configuration or Deployment Requirements**
+
+*   **Prerequisites:** Node.js version 17 or higher, TypeScript. A Freedcamp account with API access and a specific Project ID.
+*   **Configuration:** Requires the following environment variables, typically provided via a `.env` file or during deployment:
+    *   `FREEDCAMP_API_KEY`
+    *   `FREEDCAMP_API_SECRET`
+    *   `FREEDCAMP_PROJECT_ID`
+*   **Build:** The TypeScript source code (`.ts` files in `src/`) must be compiled to JavaScript (`.js` files in `dist/`) using the `npm run build` command (which invokes `tsc`).
+*   **Execution:** The compiled server is run using `node dist/server.js` or the `npm start` script. It can also be executed directly via `npx freedcamp-mcp` when installed globally or via IDE integration.
+*   **Deployment:** Involves building the project and running the `dist/server.js` file in a Node.js environment, ensuring the required environment variables are set. 
