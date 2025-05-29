@@ -76,7 +76,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                 },
                 due_date: { 
                   type: "string", 
-                  description: "Optional. Due date for the task in YYYY-MM-DD format (e.g., '2024-12-31')"
+                  description: "Optional. Due date for the task as a Unix timestamp string (e.g., '1735689600' for 2025-01-01)"
                 },
                 assigned_to_id: { 
                   type: "string", 
@@ -124,7 +124,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                 },
                 due_date: { 
                   type: "string", 
-                  description: "Optional. New due date for the task in YYYY-MM-DD format (e.g., '2024-12-31')"
+                  description: "Optional. New due date for the task as a Unix timestamp string (e.g., '1735689600' for 2025-01-01)"
                 },
                 assigned_to_id: { 
                   type: "string", 
