@@ -7,15 +7,17 @@
 [![node](https://img.shields.io/node/v/freedcamp-mcp)](https://nodejs.org/)
 [![GitHub All Releases](https://img.shields.io/github/downloads/gabeosx/freedmcpcamp/total.svg)](https://github.com/gabeosx/freedmcpcamp/releases)
 
-This is a Model Context Protocol (MCP) server implementation for Freedcamp task management. It provides tools for creating, updating, and deleting tasks in Freedcamp projects.
+This is a Model Context Protocol (MCP) server implementation for Freedcamp task management. It provides tools for creating, updating, listing, and deleting tasks in Freedcamp projects with support for bulk operations.
 
 ## Features
 
-- Create new tasks with title, description, priority, due date, and assignee
+- Create multiple tasks in a single operation with title, description, priority, due date, and assignee
 - Update existing tasks including status changes
-- Delete tasks
+- List all tasks in a project
+- Delete tasks permanently
+- Bulk operations support for all task management operations
 - Environment variable support for credentials
-- Error handling and validation
+- Comprehensive error handling and validation
 
 ## Prerequisites
 
@@ -76,30 +78,92 @@ The test harness performs the following checks:
 
 ### Available Tools
 
-1. `freedcamp_add_task`
-   - Creates a new task in Freedcamp
-   - Parameters:
-     - `title` (required): Task title
-     - `description` (optional): Task description
-     - `priority` (optional): Task priority (0-3)
-     - `due_date` (optional): Task due date (YYYY-MM-DD)
-     - `assigned_to_id` (optional): User ID to assign the task to
+1. **`freedcamp_add_task`**
+   - Creates one or more new tasks in Freedcamp
+   - Input: Object with `tasks` array containing task details
+   - Task Parameters:
+     - `title` (required): Task title - should be clear and descriptive
+     - `description` (optional): Detailed description of what the task involves
+     - `priority` (optional): Task priority level (0=Low, 1=Normal, 2=High, 3=Urgent)
+     - `due_date` (optional): Due date as Unix timestamp string (e.g., '1735689600' for 2025-01-01)
+     - `assigned_to_id` (optional): User ID to assign the task to (must be valid Freedcamp user ID)
 
-2. `freedcamp_update_task`
-   - Updates an existing task
-   - Parameters:
-     - `task_id` (required): ID of the task to update
+2. **`freedcamp_update_task`**
+   - Updates one or more existing tasks in Freedcamp
+   - Input: Object with `tasks` array containing task updates
+   - Task Parameters:
+     - `task_id` (required): ID of the task to update (must be valid existing Freedcamp task ID)
      - `title` (optional): New task title
      - `description` (optional): New task description
-     - `priority` (optional): New task priority (0-3)
-     - `due_date` (optional): New due date (YYYY-MM-DD)
-     - `assigned_to_id` (optional): New user ID to assign the task to
-     - `status` (optional): New task status (0=open, 1=completed, 2=closed)
+     - `priority` (optional): New task priority (0=Low, 1=Normal, 2=High, 3=Urgent)
+     - `due_date` (optional): New due date as Unix timestamp string
+     - `assigned_to_id` (optional): User ID to reassign the task to
+     - `status` (optional): New task status (0=Open, 1=Completed, 2=Closed)
 
-3. `freedcamp_list_tasks`
-   - Lists all tasks in the configured Freedcamp project
+3. **`freedcamp_list_tasks`**
+   - Retrieves all tasks in the configured Freedcamp project
    - No parameters required (uses project ID from environment variables)
-   - Returns a list of tasks with their details
+   - Returns task details including ID, title, status, and other metadata
+
+4. **`freedcamp_delete_task`**
+   - Permanently deletes one or more tasks from Freedcamp
+   - Input: Object with `tasks` array containing task IDs to delete
+   - Task Parameters:
+     - `task_id` (required): ID of the task to delete (WARNING: This action cannot be undone)
+
+### Example Usage
+
+**Creating multiple tasks:**
+```json
+{
+  "tasks": [
+    {
+      "title": "Setup project structure",
+      "description": "Initialize the basic project folder structure",
+      "priority": 2,
+      "due_date": "1735689600"
+    },
+    {
+      "title": "Implement authentication",
+      "description": "Add user login and registration functionality",
+      "priority": 3,
+      "assigned_to_id": "12345"
+    }
+  ]
+}
+```
+
+**Updating multiple tasks:**
+```json
+{
+  "tasks": [
+    {
+      "task_id": "67890",
+      "status": 1,
+      "description": "Updated: Added OAuth integration"
+    },
+    {
+      "task_id": "67891",
+      "priority": 3,
+      "due_date": "1735776000"
+    }
+  ]
+}
+```
+
+**Deleting multiple tasks:**
+```json
+{
+  "tasks": [
+    {
+      "task_id": "67892"
+    },
+    {
+      "task_id": "67893"
+    }
+  ]
+}
+```
 
 ### IDE Integration
 
@@ -146,3 +210,15 @@ The server can be run directly using `npx` without cloning the repository.
      }
    }
    ```
+
+## API Reference
+
+For detailed information about Freedcamp's API, visit: https://freedcamp.com/api-docs
+
+## License
+
+MIT License - see the [LICENSE](./LICENSE) file for details.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
