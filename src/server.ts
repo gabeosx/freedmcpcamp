@@ -332,13 +332,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           ]
         };
       }
-      // Return a summary of tasks
+      // Return the actual tasks data
       const tasks = json?.data?.tasks || [];
-      const summary = tasks.map((t: any) => `ID: ${t.id}, Title: ${t.title}`).join("\n");
       return {
         content: [
-          { type: "text", text: summary || "No tasks found." },
-          { type: "text", text: JSON.stringify(tasks) }
+          { type: "text", text: JSON.stringify(tasks, null, 2) }
         ]
       };
     } catch (err: any) {
