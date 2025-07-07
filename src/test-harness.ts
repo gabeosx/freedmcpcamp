@@ -1,18 +1,261 @@
-import { spawn } from 'child_process';
+import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
 import { randomUUID } from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import express, { Express } from 'express';
+import { Server as HttpServer } from 'http';
+import fetch, { Response as FetchResponse } from 'node-fetch';
+import { FreedcampMcpServer } from './core/server.js'; // MCP server
+import { StreamableHTTPServerTransport, StreamableHTTPServerTransportOptions } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { McpResponse } from '@modelcontextprotocol/sdk/types.js';
+
 
 // Load environment variables
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// HTTP Test Server State
+let httpTestServerInstance: HttpServer | null = null;
+let httpTestServerPort: number = 3001; // Default port for HTTP tests, can be made dynamic
+const MCP_HTTP_ENDPOINT = "/mcp_test";
+
+// Function to start the MCP HTTP test server
+async function startHttpTestServer(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (httpTestServerInstance) {
+      resolve();
+      return;
+    }
+
+    const app: Express = express();
+    const mcpServer = new FreedcampMcpServer();
+
+    const transportOptions: StreamableHTTPServerTransportOptions = {};
+    const httpTransport = new StreamableHTTPServerTransport(app, MCP_HTTP_ENDPOINT, transportOptions);
+
+    mcpServer.getServer().connect(httpTransport)
+      .then(() => {
+        httpTestServerInstance = app.listen(httpTestServerPort, () => {
+          console.log(`HTTP Test Server listening on http://localhost:${httpTestServerPort}${MCP_HTTP_ENDPOINT}`);
+          resolve();
+        });
+        httpTestServerInstance.on('error', (err) => {
+          console.error('HTTP Test Server failed to start:', err);
+          reject(err);
+        });
+      })
+      .catch(err => {
+        console.error('Failed to connect MCP server to HTTP transport for testing:', err);
+        reject(err);
+      });
+  });
+}
+
+// Function to stop the MCP HTTP test server
+async function stopHttpTestServer(): Promise<void> {
+  return new Promise((resolve) => {
+    if (httpTestServerInstance) {
+      httpTestServerInstance.close(() => {
+        console.log('HTTP Test Server stopped.');
+        httpTestServerInstance = null;
+        resolve();
+      });
+    } else {
+      resolve();
+    }
+  });
+}
+
+// Helper function to send HTTP MCP requests
+async function sendHttpMcpRequest(requestBody: any): Promise<McpResponse> {
+  const response = await fetch(`http://localhost:${httpTestServerPort}${MCP_HTTP_ENDPOINT}`, {
+    method: 'POST',
+    body: JSON.stringify(requestBody),
+    headers: { 'Content-Type': 'application/json' }
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);
+  }
+  return response.json() as Promise<McpResponse>;
+}
+
+// HTTP Test Cases
+// Re-using createdTaskId and createdBulkTaskIds for HTTP tests too, will need careful reset or separation if running both test suites in one go.
+// For now, assuming they are run separately or state is managed.
+
+const httpTests = [
+  {
+    name: 'http_list_tools',
+    request: {
+      mcp_version: '1.0', // Using mcp_version for HTTP, though server might not strictly require if following JSON-RPC like structure
+      id: randomUUID(),
+      method: 'ListTools', // MCP SDK uses ListTools
+      params: {}
+    }
+  },
+  {
+    name: 'http_add_task',
+    request: {
+      mcp_version: '1.0',
+      id: randomUUID(),
+      method: 'CallTool', // MCP SDK uses CallTool
+      params: {
+        name: 'freedcamp_add_task',
+        arguments: {
+          tasks: [
+            {
+              title: 'Test task from MCP via HTTP',
+              description: 'This is a test task created via MCP HTTP endpoint',
+              priority: 1
+            }
+          ]
+        }
+      }
+    }
+  },
+  // list_tasks_after_add will be dynamically constructed or called
+];
+
+// Dynamically generated HTTP tests (similar to stdio ones)
+function getHttpUpdateTaskTest(taskId: string) {
+  if (!taskId) {
+    throw new Error('No task ID available for HTTP update test');
+  }
+  return {
+    name: 'http_update_task',
+    request: {
+      mcp_version: '1.0',
+      id: randomUUID(),
+      method: 'CallTool',
+      params: {
+        name: 'freedcamp_update_task',
+        arguments: {
+          tasks: [
+            {
+              task_id: taskId,
+              title: 'Updated HTTP test task from MCP',
+              description: 'This task was updated via MCP HTTP (single)',
+              priority: 2,
+              status: 1 // Set to completed
+            }
+          ]
+        }
+      }
+    }
+  };
+}
+
+function getHttpDeleteTaskTest(taskId: string) {
+  if (!taskId) {
+    throw new Error('No task ID available for HTTP delete test');
+  }
+  return {
+    name: 'http_delete_task',
+    request: {
+      mcp_version: '1.0',
+      id: randomUUID(),
+      method: 'CallTool',
+      params: {
+        name: 'freedcamp_delete_task',
+        arguments: {
+          tasks: [
+            { task_id: taskId }
+          ]
+        }
+      }
+    }
+  };
+}
+
+function getHttpListTasksTest() {
+  return {
+    name: 'http_list_tasks',
+    request: {
+      mcp_version: '1.0',
+      id: randomUUID(),
+      method: 'CallTool',
+      params: {
+        name: 'freedcamp_list_tasks',
+        arguments: {}
+      }
+    }
+  };
+}
+
+
 // Store test state
-let createdTaskId: string | null = null;
-let createdBulkTaskIds: string[] = [];
+let createdTaskId: string | null = null; // Shared between stdio and http tests for now
+let createdBulkTaskIds: string[] = []; // Shared between stdio and http tests for now
 let currentTest: any = null; // To help response handler identify context
+
+// Response handler for HTTP tests
+function handleHttpMcpResponse(response: McpResponse, testName: string) {
+  console.log(`\nReceived HTTP response for ${testName}:`, JSON.stringify(response, null, 2));
+
+  if (response.error) {
+    console.error(`Error in HTTP JSON-RPC response for ${testName}:`, response.error);
+  }
+
+  // Similar logic to stdio handler for extracting task IDs and checking errors
+  if (response.result?.content && Array.isArray(response.result.content)) {
+    let hasOperationError = false;
+    for (const contentItem of response.result.content) {
+      if (contentItem.type === 'text' && typeof contentItem.text === 'string') {
+        try {
+          const parsedContent = JSON.parse(contentItem.text);
+          if (parsedContent.text && (parsedContent.text.toLowerCase().includes("error") || parsedContent.text.toLowerCase().includes("failed"))) {
+            console.error(`Operation error for ${testName} (item: ${contentItem.text}): ${parsedContent.text}`, parsedContent.details || parsedContent.error_details || '');
+            hasOperationError = true;
+          }
+        } catch (e) { /* Not a JSON string from our server's format, or doesn't have an error structure, ignore for error checking */ }
+      }
+    }
+
+    if (testName === 'http_add_task') {
+      if (!hasOperationError && response.result.content.length > 0 && response.result.content[0].type === 'text') {
+        try {
+          const parsedText = JSON.parse(response.result.content[0].text);
+          if (parsedText && parsedText.task_id) {
+            createdTaskId = parsedText.task_id; // Update shared state
+            console.log(`Stored single task ID (from HTTP): ${createdTaskId}`);
+          } else {
+             console.warn(`Could not extract task_id from http_add_task response item: ${response.result.content[0].text}`);
+          }
+        } catch (e) { console.warn(`Could not parse JSON from http_add_task response item: ${response.result.content[0].text}`, e); }
+      }
+    } else if (testName === 'http_bulk_add_tasks') { // Assuming a future http_bulk_add_tasks
+      createdBulkTaskIds = []; // Reset
+      if (!hasOperationError) {
+        for (const item of response.result.content) {
+          if (item.type === 'text' && typeof item.text === 'string') {
+            try {
+              const parsedText = JSON.parse(item.text);
+              if (parsedText && parsedText.task_id) {
+                createdBulkTaskIds.push(parsedText.task_id);
+              } else {
+                console.warn(`Could not extract task_id from ${testName} response item: ${item.text}`);
+              }
+            } catch (e) { console.warn(`Could not parse JSON from ${testName} response item: ${item.text}`, e); }
+          }
+        }
+      }
+      if (createdBulkTaskIds.length > 0) {
+        console.log(`Stored bulk task IDs (from HTTP): ${createdBulkTaskIds.join(', ')}`);
+      } else if (!hasOperationError && response.result.content.length > 0) {
+        console.warn("HTTP Bulk add operation reported success, but no task IDs were extracted.");
+      }
+    } else if (testName.includes('list_tasks')) {
+      console.log(`${testName} results:`);
+      // Log content as is, specific parsing for validation would be more complex here
+      response.result.content.forEach(item => console.log("- ", item.type === 'text' ? item.text : JSON.stringify(item)));
+    } else if (testName.includes('update') || testName.includes('delete')) {
+       console.log(`${testName} results:`);
+       response.result.content.forEach(item => console.log("- ", item.type === 'text' ? item.text : JSON.stringify(item)));
+    }
+  }
+}
 
 // Test cases
 const tests = [
@@ -291,7 +534,7 @@ if (missingEnvVars.length > 0) {
 }
 
 // Spawn the MCP server process
-const serverPath = path.resolve(__dirname, '..', 'dist', 'server.js');
+const serverPath = path.resolve(__dirname, '..', 'dist', 'cli.js');
 const server = spawn('node', [serverPath], { 
   env: process.env, // Pass through all environment variables
   stdio: ['pipe', 'pipe', 'pipe']
@@ -545,6 +788,116 @@ runTests().catch(console.error);
 
 // Handle server exit
 server.on('exit', (code) => {
-  console.log(`\nServer exited with code ${code}`);
-  process.exit(code || 0);
-}); 
+  console.log(`\nStdio Server exited with code ${code}`);
+  // Removed process.exit here to allow HTTP tests to run if main decides so
+});
+
+// Function to run HTTP tests
+async function runHttpTests() {
+  console.log("\n--- Starting HTTP Operation Tests ---");
+  await startHttpTestServer();
+
+  // Reset task IDs for HTTP tests if needed, or manage state more carefully
+  createdTaskId = null;
+  // createdBulkTaskIds = []; // If doing bulk HTTP tests
+
+  const singleTestTimeout = 2000; // ms
+  // const bulkTestTimeout = 4000; // ms
+  const listTaskTimeout = 3000; // ms
+  let httpTestFailures = 0;
+
+  try {
+    for (const test of httpTests) { // httpTests array
+      currentTest = test; // Set context for potential generic error handlers
+      console.log(`\nRunning HTTP test: ${test.name}`);
+      console.log('Sending HTTP request:', JSON.stringify(test.request, null, 2));
+      try {
+        const response = await sendHttpMcpRequest(test.request);
+        handleHttpMcpResponse(response, test.name); // Process the response
+        await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between requests
+      } catch (error) {
+        console.error(`Error during HTTP test ${test.name}:`, error);
+        httpTestFailures++;
+      }
+    }
+
+    // After adding a task, list, update, then delete it
+    if (createdTaskId) {
+      console.log(`\n--- HTTP Single Task Follow-up (ID: ${createdTaskId}) ---`);
+      const followUpTests = [
+        getHttpListTasksTest(),
+        getHttpUpdateTaskTest(createdTaskId),
+        getHttpDeleteTaskTest(createdTaskId),
+        { ...getHttpListTasksTest(), name: `${getHttpListTasksTest().name}_after_delete` }
+      ];
+
+      for (const test of followUpTests) {
+        currentTest = test;
+        console.log(`\nRunning HTTP follow-up test: ${test.name}`);
+        console.log('Sending HTTP request:', JSON.stringify(test.request, null, 2));
+        try {
+          const response = await sendHttpMcpRequest(test.request);
+          handleHttpMcpResponse(response, test.name);
+          const timeout = test.name.includes('list') ? listTaskTimeout : singleTestTimeout;
+          await new Promise(resolve => setTimeout(resolve, timeout));
+        } catch (error) {
+          console.error(`Error during HTTP follow-up test ${test.name}:`, error);
+          httpTestFailures++;
+        }
+      }
+    } else {
+      console.warn('HTTP add_task did not yield a task ID. Skipping follow-up HTTP tests.');
+      // Consider if this itself should be a failure
+      // For now, it's a warning, and follow-up tests are skipped.
+    }
+
+  } catch (e) {
+    console.error("A critical error occurred in the HTTP test runner:", e);
+    httpTestFailures++; // Count this as a general failure
+  } finally {
+    try {
+      await stopHttpTestServer();
+    } catch (e) {
+      console.error("Error stopping HTTP test server:", e);
+      httpTestFailures++;
+    }
+    console.log(`\n--- HTTP tests completed. Failures: ${httpTestFailures} ---`);
+    if (httpTestFailures > 0 && (process.argv.includes('--http-only') || process.argv.includes('--all-tests'))) {
+      // Only exit with error if HTTP tests were specifically run and failed.
+      // Avoid exiting if stdio tests also ran and might have their own exit code.
+      if (process.argv.includes('--http-only')) process.exitCode = 1;
+    }
+  }
+}
+
+
+// Main execution logic
+async function main() {
+  // Determine which tests to run, e.g., via command line args or env var
+  const runStdio = !process.argv.includes('--http-only');
+  const runHttp = process.argv.includes('--http-only') || process.argv.includes('--all-tests');
+
+  if (runStdio) {
+    await runTests(); // Original runTests for stdio, perhaps rename to runStdioTests
+  }
+  if (runHttp) {
+    await runHttpTests();
+  }
+
+  if (!runStdio && !runHttp) {
+    console.log("No tests specified. Use --http-only or --all-tests, or run without args for stdio tests.");
+  }
+
+  // Ensure process exits after tests if stdio server is not running or has exited
+  if (server && server.exitCode !== null) {
+     process.exit(server.exitCode || 0);
+  } else if (!runStdio && runHttp) { // If only HTTP tests ran
+     process.exit(0); // Exit cleanly
+  }
+  // If stdio server is still running, its exit will trigger process.exit
+}
+
+main().catch(err => {
+  console.error("Unhandled error in main test execution:", err);
+  process.exit(1);
+});
