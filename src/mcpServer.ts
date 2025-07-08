@@ -10,39 +10,27 @@ export interface FreedcampMcpConfig {
   projectId: string;
 }
 
-// Define schemas for tools
+// Define schemas for tools with detailed descriptions
 const singleAddTaskSchema = z.object({
-  title: z.string(),
-  description: z.string().optional(),
-  due_date: z.string().optional(), // YYYY-MM-DD
-  assigned_to_id: z.string().optional(),
-  priority: z.number().int().min(0).max(3).optional()
+  title: z.string().describe("Title of the task (required) - should be clear and descriptive"),
+  description: z.string().optional().describe("Detailed description of what the task involves (optional)"),
+  due_date: z.string().optional().describe("Due date as Unix timestamp string (optional) - e.g., '1735689600' for 2025-01-01"),
+  assigned_to_id: z.string().optional().describe("User ID to assign the task to (optional) - must be valid Freedcamp user ID"),
+  priority: z.number().int().min(0).max(3).optional().describe("Task priority level (optional): 0=Low, 1=Normal, 2=High, 3=Urgent")
 });
-const addTaskSchema = z.object({
-  tasks: z.array(singleAddTaskSchema)
-});
-
 const singleUpdateTaskSchema = z.object({
-  task_id: z.string(),
-  title: z.string().optional(),
-  description: z.string().optional(),
-  due_date: z.string().optional(),
-  assigned_to_id: z.string().optional(),
-  priority: z.number().int().min(0).max(3).optional(),
-  status: z.number().int().min(0).max(2).optional()
-});
-const updateTaskSchema = z.object({
-  tasks: z.array(singleUpdateTaskSchema)
+  task_id: z.string().describe("ID of the task to update (required) - must be valid existing Freedcamp task ID"),
+  title: z.string().optional().describe("New task title (optional)"),
+  description: z.string().optional().describe("New task description (optional)"),
+  due_date: z.string().optional().describe("New due date as Unix timestamp string (optional) - e.g., '1735689600' for 2025-01-01"),
+  assigned_to_id: z.string().optional().describe("User ID to reassign the task to (optional) - must be valid Freedcamp user ID"),
+  priority: z.number().int().min(0).max(3).optional().describe("New task priority level (optional): 0=Low, 1=Normal, 2=High, 3=Urgent"),
+  status: z.number().int().min(0).max(2).optional().describe("New task status (optional): 0=Open, 1=Completed, 2=Closed")
 });
 
 const singleDeleteTaskSchema = z.object({
-  task_id: z.string()
+  task_id: z.string().describe("ID of the task to delete (required) - WARNING: This action cannot be undone")
 });
-const deleteTaskSchema = z.object({
-  tasks: z.array(singleDeleteTaskSchema)
-});
-
-const listTasksSchema = z.object({});
 
 async function executeFreedcampRequest(url: string, method: string, authParams: Record<string, string>, bodyData?: Record<string, any>) {
   const form = new FormData();
@@ -146,7 +134,7 @@ const createMcpServer = (config: FreedcampMcpConfig) => {
 
   server.registerTool("freedcamp_add_task",
     {
-      description: "Create new tasks in Freedcamp.",
+      description: "Create one or more new tasks in Freedcamp with support for title, description, priority, due date, and assignee. Supports bulk operations for creating multiple tasks at once.",
       inputSchema: {
         tasks: z.array(singleAddTaskSchema)
       },
@@ -168,7 +156,7 @@ const createMcpServer = (config: FreedcampMcpConfig) => {
 
   server.registerTool("freedcamp_update_task",
     {
-      description: "Update tasks in Freedcamp.",
+      description: "Update one or more existing tasks in Freedcamp including title, description, priority, due date, assignee, and status. Supports bulk operations for updating multiple tasks at once.",
       inputSchema: {
         tasks: z.array(singleUpdateTaskSchema)
       },
@@ -190,7 +178,7 @@ const createMcpServer = (config: FreedcampMcpConfig) => {
 
   server.registerTool("freedcamp_delete_task",
     {
-      description: "Delete tasks in Freedcamp.",
+      description: "Permanently delete one or more tasks from Freedcamp. WARNING: This action cannot be undone. Supports bulk operations for deleting multiple tasks at once.",
       inputSchema: {
         tasks: z.array(singleDeleteTaskSchema)
       },
@@ -212,7 +200,7 @@ const createMcpServer = (config: FreedcampMcpConfig) => {
 
   server.registerTool("freedcamp_list_tasks",
     {
-      description: "List all tasks in Freedcamp.",
+      description: "Retrieve all tasks in the configured Freedcamp project. Returns task details including ID, title, description, status, priority, due date, and assignee information.",
       inputSchema: {},
       annotations: {
         title: "List Tasks"
