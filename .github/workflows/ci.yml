@@ -32,9 +32,11 @@ jobs:
           NODE_OPTIONS: --experimental-vm-modules
         run: npm test
         
-      - name: Lint commits
+- name: Lint commits
         uses: wagoid/commitlint-github-action@v5
         if: github.event_name == 'pull_request'
+        with:
+          configFile: './commitlint.config.cjs'
         
       - name: Cache build
         uses: actions/cache@v4
