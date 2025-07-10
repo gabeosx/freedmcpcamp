@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  freedcamp-mcp-http:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - FREEDCAMP_API_KEY=${FREEDCAMP_API_KEY}
+      - FREEDCAMP_API_SECRET=${FREEDCAMP_API_SECRET}
+      - FREEDCAMP_PROJECT_ID=${FREEDCAMP_PROJECT_ID}
+      - PORT=3000
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped

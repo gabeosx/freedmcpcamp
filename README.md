@@ -9,6 +9,10 @@
 
 This is a Model Context Protocol (MCP) server implementation for Freedcamp task management. It provides tools for creating, updating, listing, and deleting tasks in Freedcamp projects with support for bulk operations.
 
+**Available Transport Methods:**
+- **STDIO Transport** - Traditional MCP transport for IDE integrations (Claude Desktop, Cursor, etc.)
+- **HTTP Transport** - Modern REST API with Server-Sent Events for web applications and cloud deployments
+
 ## Features
 
 - Create multiple tasks in a single operation with title, description, priority, due date, and assignee
@@ -56,25 +60,108 @@ First build the TypeScript code:
 npm run build
 ```
 
-Then start the server:
+#### STDIO Transport (Default)
+This is the traditional transport method used by IDEs and MCP clients:
 ```bash
 npm start
 ```
 
+#### HTTP Transport
+For containerized deployments and HTTP-based integrations:
+
+**Development (with .env file):**
+```bash
+npm run start:http:test
+```
+
+**Production (with environment variables):**
+```bash
+npm run start:http
+```
+
+**Direct execution:**
+```bash
+# With environment variables
+FREEDCAMP_API_KEY=your_key FREEDCAMP_API_SECRET=your_secret FREEDCAMP_PROJECT_ID=your_project npm run start:http
+
+# Or using npx
+npx freedcamp-mcp --http
+```
+
+The HTTP server will start on port 3000 (or the port specified by the `PORT` environment variable) and provide:
+- **MCP endpoint**: `http://localhost:3000/mcp`
+- **Health check**: `http://localhost:3000/health`
+
+**HTTP Transport Features:**
+- Stateless operation - each request is independent
+- JSON responses with proper error handling
+- CORS support for web applications
+- Built-in health monitoring
+- Suitable for load balancing and clustering
+
+### Docker Deployment
+
+For production deployments, you can use Docker to run the HTTP transport:
+
+#### Using Docker Compose (Recommended)
+
+1. Create a `.env` file with your Freedcamp credentials:
+```bash
+FREEDCAMP_API_KEY=your_api_key
+FREEDCAMP_API_SECRET=your_api_secret
+FREEDCAMP_PROJECT_ID=your_project_id
+```
+
+2. Start the service:
+```bash
+docker-compose up -d
+```
+
+#### Using Docker directly
+
+```bash
+# Build the image
+docker build -t freedcamp-mcp .
+
+# Run the container
+docker run -d \
+  --name freedcamp-mcp \
+  -p 3000:3000 \
+  -e FREEDCAMP_API_KEY=your_api_key \
+  -e FREEDCAMP_API_SECRET=your_api_secret \
+  -e FREEDCAMP_PROJECT_ID=your_project_id \
+  freedcamp-mcp
+```
+
+The containerized server provides the same MCP functionality via HTTP transport, making it suitable for:
+- Cloud deployments
+- Kubernetes environments
+- Load-balanced setups
+- Integration with HTTP-based MCP clients
+
 ### Running the Test Harness
 
-The project includes a comprehensive test harness that verifies all MCP functionality:
+The project includes comprehensive test harnesses that verify all MCP functionality for both transport methods:
 
+**STDIO Transport Test:**
 ```bash
 npm test
 ```
 
-The test harness performs the following checks:
+**HTTP Transport Test:**
+```bash
+npm run test:http
+```
+
+Both test harnesses perform the following checks:
 1. Server initialization with proper protocol version
 2. Tool listing and capability verification
-3. Task creation with various parameters
-4. Task updates including status changes
+3. Single task creation, update, and deletion
+4. Bulk task operations (create, update, delete)
 5. Task listing and verification
+6. Error handling and edge cases
+
+**Note:** The HTTP test harness requires the HTTP server to be running. Use `npm run start:http:test` to start the server with test environment variables loaded.
 
 ### Available Tools
 
@@ -167,10 +254,11 @@ The test harness performs the following checks:
 
 ### IDE Integration
 
-The server can be run directly using `npx` without cloning the repository.
+The server can be run directly using `npx` without cloning the repository. Choose between STDIO transport (traditional) or HTTP transport (modern) based on your needs.
 
 #### Cursor
 
+**Option 1: STDIO Transport (Default)**
 1. Open (or create) `.cursor/mcp.json` in your project root.
 2. Add your Freedcamp MCP server configuration:
    ```json
@@ -190,8 +278,69 @@ The server can be run directly using `npx` without cloning the repository.
    ```
 3. Restart Cursor or reload MCP servers.
 
+**Option 2: HTTP Transport**
+1. First, start the HTTP server (in a separate terminal):
+   ```bash
+   npx freedcamp-mcp --http
+   # Or with environment variables:
+   FREEDCAMP_API_KEY=your_key FREEDCAMP_API_SECRET=your_secret FREEDCAMP_PROJECT_ID=your_project npx freedcamp-mcp --http
+   ```
+2. Configure Cursor to use HTTP transport:
+   ```json
+   {
+     "mcpServers": {
+       "freedcamp": {
+         "transport": "http",
+         "url": "http://localhost:3000/mcp"
+       }
+     }
+   }
+   ```
+3. Restart Cursor or reload MCP servers.
+
+#### Claude Desktop
+
+**Option 1: STDIO Transport (Default)**
+1. Open (or create) `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS or `%APPDATA%/Claude/claude_desktop_config.json` on Windows.
+2. Add your Freedcamp MCP server configuration:
+   ```json
+   {
+     "mcpServers": {
+       "freedcamp": {
+         "command": "npx",
+         "args": ["freedcamp-mcp"],
+         "env": {
+           "FREEDCAMP_API_KEY": "your_api_key",
+           "FREEDCAMP_API_SECRET": "your_api_secret",
+           "FREEDCAMP_PROJECT_ID": "your_project_id"
+         }
+       }
+     }
+   }
+   ```
+3. Restart Claude Desktop.
+
+**Option 2: HTTP Transport**
+1. Start the HTTP server:
+   ```bash
+   npx freedcamp-mcp --http
+   ```
+2. Configure Claude Desktop to use HTTP transport:
+   ```json
+   {
+     "mcpServers": {
+       "freedcamp": {
+         "transport": "http",
+         "url": "http://localhost:3000/mcp"
+       }
+     }
+   }
+   ```
+3. Restart Claude Desktop.
+
 #### Roo
 
+**Option 1: STDIO Transport (Default)**
 1. Open (or create) your Roo MCP config file (commonly `roo.mcp.json` or similar).
 2. Add your Freedcamp MCP server configuration:
    ```json
@@ -206,6 +355,23 @@ The server can be run directly using `npx` without cloning the repository.
            "FREEDCAMP_API_SECRET": "your_api_secret",
            "FREEDCAMP_PROJECT_ID": "your_project_id"
          }
+       }
+     }
+   }
+   ```
+
+**Option 2: HTTP Transport**
+1. Start the HTTP server:
+   ```bash
+   npx freedcamp-mcp --http
+   ```
+2. Configure Roo to use HTTP transport:
+   ```json
+   {
+     "mcpServers": {
+       "Freedcamp": {
+         "transport": "http",
+         "url": "http://localhost:3000/mcp"
        }
      }
    }
