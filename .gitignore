@@ -22,9 +22,8 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Documentation files
-freedcampdocs.html
-mcpdocs.md
+# Test logs
+*.log
 
 # Roo AI configuration files (prevent accidental commits)
 .roo/
