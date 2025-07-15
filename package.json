@@ -1,6 +1,6 @@
 {
   "name": "freedcamp-mcp",
-  "version": "0.1.31",
+  "version": "0.1.32",
   "description": "MCP server implementation for Freedcamp task management",
   "type": "module",
   "main": "dist/freedcamp-mcp.js",
