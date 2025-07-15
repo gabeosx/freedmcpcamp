@@ -4,12 +4,12 @@ test.js
 .env
 .git/
 .gitignore
-mcpdocs.md
-freedcampdocs.html
 .vscode/
 .idea/
 *.sublime-*
 .cursor/
+
+# Logs
 *.log
 npm-debug.log*
 .DS_Store
