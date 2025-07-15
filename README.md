@@ -2,10 +2,10 @@
 
 [![npm version](https://img.shields.io/npm/v/freedcamp-mcp)](https://www.npmjs.com/package/freedcamp-mcp)
 [![license](https://img.shields.io/npm/l/freedcamp-mcp)](./LICENSE)
-[![build](https://github.com/gabeosx/freedcamp-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/gabeosx/freedcamp-mcp/actions/workflows/ci.yml)
+[![build](https://github.com/gabeosx/freedmcpcamp/actions/workflows/ci.yml/badge.svg)](https://github.com/gabeosx/freedmcpcamp/actions/workflows/ci.yml)
 [![downloads](https://img.shields.io/npm/dm/freedcamp-mcp)](https://www.npmjs.com/package/freedcamp-mcp)
 [![node](https://img.shields.io/node/v/freedcamp-mcp)](https://nodejs.org/)
-[![GitHub All Releases](https://img.shields.io/github/downloads/gabeosx/freedcamp-mcp/total.svg)](https://github.com/gabeosx/freedcamp-mcp/releases)
+[![GitHub All Releases](https://img.shields.io/github/downloads/gabeosx/freedmcpcamp/total.svg)](https://github.com/gabeosx/freedmcpcamp/releases)
 
 This is a Model Context Protocol (MCP) server implementation for Freedcamp task management. It provides tools for creating, updating, listing, and deleting tasks in Freedcamp projects with support for bulk operations.
 
